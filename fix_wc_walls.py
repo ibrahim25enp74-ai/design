@@ -2,13 +2,14 @@
 
 - completes the missing outer walls (WC 1 north / west / women's south wall,
   WC 2 west wall above the men's door) and trims wall openings to the doors
-- replaces the double-line cubicle partitions with single lines (layer A-PART)
+- rebuilds the cubicle walls as clean 20 cm walls with 0.70 door openings
+  that match the drawn doors
 - merges all walls of each plan into one clean outline (no overlapping lines)
 """
 import sys
 
 import ezdxf
-from shapely.geometry import box, Polygon
+from shapely.geometry import box, LineString, Polygon
 from shapely.ops import unary_union
 
 SRC, DST = sys.argv[1], sys.argv[2]
@@ -47,7 +48,8 @@ for xf, xb in ((3616.44, 3618.14), (3620.04, 3618.34)):  # front line, spine fac
     for a, b in zip(ys[::2], ys[1::2]):
         wc1_part.append(((xf, a), (xf, b)))
     for y in (17.21, 18.71, 20.20, 21.70):
-        wc1_part.append(((xf, y), (xb, y)))
+        x0 = xf + (0.10 if xb < xf else -0.10)  # reach the outer face of the front wall
+        wc1_part.append(((x0, y), (xb, y)))
 
 # ---------------------------------------------------------------- WC 2
 east = Polygon([(3647.86, 13.11), (3648.48, 18.31), (3648.68, 18.29), (3648.06, 13.09)])
@@ -72,7 +74,7 @@ for xs, x_end in (
     ([3639.04, 3640.44, 3641.84, 3643.24, 3644.64, 3646.04, 3647.44], None),
 ):
     for x in xs:
-        wc2_part.append(((x, y_front), (x, y_back)))
+        wc2_part.append(((x, y_front - 0.10), (x, y_back)))
     hinges = [x + 0.35 for x in xs[:-1]] if x_end is None else [x + 0.35 for x in xs]
     stop = x_end if x_end is not None else xs[-1]
     xs_front = [xs[0]]
@@ -92,40 +94,26 @@ def write_walls(polys, openings):
             msp.add_lwpolyline(pts, close=True, dxfattribs={"layer": "A-WALL"})
 
 
-write_walls(wc1, wc1_openings)
-write_walls(wc2, wc2_openings)
-for a, b in wc1_part + wc2_part:
-    msp.add_line(a, b, dxfattribs={"layer": "A-PART"})
-
-# Cubicle dims in WC 2 now run partition to partition.
-for e in msp.query("TEXT"):
-    x, y = e.dxf.insert.x, e.dxf.insert.y
-    if 3630 < x < 3637 and abs(y - 19.06) < 0.05 and e.dxf.text == "1.20":
-        e.dxf.text = "1.40"
-    if 3636.5 < x < 3637 and abs(y - 19.06) < 0.05:
-        e.dxf.text = "1.50"
-dim_x = {3630.64: 3630.54, 3631.84: 3631.94, 3632.04: 3631.94, 3633.24: 3633.34,
-         3633.44: 3633.34, 3634.64: 3634.74, 3634.84: 3634.74, 3636.04: 3636.14,
-         3636.24: 3636.14, 3637.44: 3637.64}
+def cubicle_walls(segments):
+    return [LineString([a, b]).buffer(T / 2, cap_style=2) for a, b in segments]
 
 
-def snap(v):
-    for k, n in dim_x.items():
-        if abs(v - k) < 0.02:
-            return n
-    return v
+write_walls(wc1 + cubicle_walls(wc1_part), wc1_openings)
+write_walls(wc2 + cubicle_walls(wc2_part), wc2_openings)
 
-
+# The last men's cubicle in WC 2 now closes on the divider (clear 1.40).
 for e in msp.query('LINE[layer=="DIM"]'):
     s, t = e.dxf.start, e.dxf.end
-    if 3630 < s.x < 3638 and 18.4 < min(s.y, t.y) and max(s.y, t.y) < 19.5:
-        if abs(s.x - t.x) > 1e-6 and abs(t.x - s.x) < 0.2:  # tick: snap its centre
-            d = snap((s.x + t.x) / 2) - (s.x + t.x) / 2
-        else:
-            e.dxf.start = (snap(s.x), s.y)
-            e.dxf.end = (snap(t.x), t.y)
-            continue
-        e.dxf.start = (s.x + d, s.y)
-        e.dxf.end = (t.x + d, t.y)
+    if 18.4 < min(s.y, t.y) and max(s.y, t.y) < 19.5:
+        if abs(s.x - 3637.44) < 0.02 and abs(t.x - 3637.44) < 0.02:
+            e.dxf.start, e.dxf.end = (3637.64, s.y), (3637.64, t.y)
+        elif abs(t.x - 3637.44) < 0.02:  # dimension line
+            e.dxf.end = (3637.64, t.y)
+        elif abs((s.x + t.x) / 2 - 3637.44) < 0.02:  # tick
+            e.dxf.start, e.dxf.end = (s.x + 0.2, s.y), (t.x + 0.2, t.y)
+for e in msp.query("TEXT"):
+    if abs(e.dxf.insert.x - 3636.68) < 0.05 and abs(e.dxf.insert.y - 19.06) < 0.05:
+        e.dxf.text = "1.40"
+        e.dxf.insert = (e.dxf.insert.x + 0.1, e.dxf.insert.y)
 
 doc.saveas(DST)
