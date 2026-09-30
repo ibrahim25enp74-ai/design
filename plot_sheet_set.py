@@ -23,11 +23,15 @@ texts = [e for e in msp.query("TEXT") if e.dxf.layer.startswith("TB")]
 
 
 def image_missing(e):
+    """ezdxf looks for the file at its stored path, then by name next to the DXF."""
     if e.dxftype() != "IMAGE":
         return False
     img = e.image_def
     name = img.dxf.filename.replace("\\", "/") if img else ""
-    return not name or not os.path.exists(os.path.join(os.path.dirname(os.path.abspath(SRC)), name))
+    here = os.path.dirname(os.path.abspath(SRC))
+    return not name or not any(
+        os.path.exists(p) for p in (os.path.join(here, name), os.path.join(here, os.path.basename(name)))
+    )
 
 
 # an IMAGE whose file is not next to the DXF would plot as a big filename
