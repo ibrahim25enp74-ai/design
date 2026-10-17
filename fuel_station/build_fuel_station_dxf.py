@@ -325,23 +325,25 @@ dot((6.75, 7.5), 0.12, "TANK-FIT")
 dim((5.75, 8.55), (7.75, 8.55), (0, 8.55), "2.0", h=0.25)
 dim((8.05, 6.75), (8.05, 8.25), (8.05, 0), "1.5", h=0.25)
 
-# --- building 2: WC, administration, stair hall, workers' room
+# --- building 2: WC, administration, stair core, workers' room
 B2 = box(14.25, 1.25, 29.75, 5.25)
-r_wc, r_adm, r_hall, r_wrk = box(14.5, 1.5, 17.0, 5.0), box(17.25, 1.5, 20.75, 5.0), \
-    box(21.0, 1.5, 25.0, 5.0), box(25.25, 1.5, 29.5, 5.0)
+SX0, SX1 = 22.1, 24.55                       # stair core between the two rooms (2.45 clear)
+SY1 = 3.6                                    # foot of both flights, the lobby is below
+r_wc, r_adm, r_hall, r_wrk = box(14.5, 1.5, 17.0, 5.0), box(17.25, 1.5, SX0 - WT, 5.0), \
+    box(SX0, 1.5, SX1, 5.0), box(SX1 + WT, 1.5, 29.5, 5.0)
 wall_parts.append(B2.difference(unary_union([r_wc, r_adm, r_hall, r_wrk])))
-wall_parts += [box(21.4, 5.25, 22.0, 5.85), box(24.0, 5.25, 24.6, 5.85)]       # piers at the steps
+SXC = (SX0 + SX1) / 2
+wall_parts += [box(SXC - 1.925, 5.25, SXC - 1.325, 5.85), box(SXC + 1.325, 5.25, SXC + 1.925, 5.85)]  # piers at the steps
 # WC cubicles (10 cm partitions)
 wall_parts += [box(15.7, 1.5, 15.8, 3.05), box(14.5, 2.95, 17.0, 3.05)]
 wall_holes += [box(14.8, 2.9, 15.5, 3.1), box(16.0, 2.9, 16.7, 3.1),
-               box(15.6, 4.95, 16.5, 5.3), box(22.4, 4.95, 23.6, 5.3),
-               box(20.7, 4.0, 21.05, 4.9), box(24.95, 4.0, 25.3, 4.9)]
+               box(15.6, 4.95, 16.5, 5.3), box(SXC - 0.625, 4.95, SXC + 0.625, 5.3),
+               box(SX0 - WT - 0.05, SY1, SX0 + 0.05, SY1 + 1.0), box(SX1 - 0.05, SY1, SX1 + WT + 0.05, SY1 + 1.0)]
 door((15.5, 2.95), (14.8, 2.95), 1)
 door((16.7, 2.95), (16.0, 2.95), 1)
 door((16.5, 5.0), (15.6, 5.0), 1)
-door((22.4, 5.0), (23.6, 5.0), -1)
-door((21.0, 4.9), (21.0, 4.0), 1)
-door((25.0, 4.9), (25.0, 4.0), -1)
+door((SX0 - WT, SY1 + 1.0), (SX0 - WT, SY1), -1)    # into the administration room
+door((SX1 + WT, SY1 + 1.0), (SX1 + WT, SY1), 1)     # into the workers' room
 for cx in (15.1, 16.4):                                                          # squat toilets
     pline([(cx - 0.22, 1.75), (cx + 0.22, 1.75), (cx + 0.22, 2.45), (cx - 0.22, 2.45)], "SANITARY", close=True)
     bulge_pline(rrect_path(cx - 0.1, 1.9, cx + 0.1, 2.25, 0.08), "SANITARY", close=True)
@@ -349,33 +351,37 @@ for cy in (3.7, 4.35):                                                          
     c = o((16.78, cy))
     msp.add_ellipse(c, major_axis=tuple(a - b for a, b in zip(o((16.78, cy + 0.25)), c)), ratio=0.7,
                     dxfattribs={"layer": "SANITARY"})
-# stairs
-pline([(21.6, 1.5), (25.0, 1.5), (25.0, 4.1), (21.6, 4.1)], "STAIR", close=True)
-pline([(23.3, 1.75), (23.45, 1.75), (23.45, 4.1), (23.3, 4.1)], "STAIR", close=True)
-y = 1.75
-while y < 4.1:
-    line((23.45, y), (25.0, y), "STAIR")
-    y += 0.25
-hub = (23.3, 2.8)
-for a in range(110, 251, 20):                                                    # winder
+
+# stair: two flights either side of a central wall, joined by winders at the rear
+HUB = (SXC, 2.1)                              # rear end of the central wall
+newel = box(SXC - 0.075, HUB[1], SXC + 0.075, SY1)
+outline(newel, "STAIR")
+hatch(newel, "STAIR", "SOLID")
+for y in (2.35, 2.6, 2.85, 3.1, 3.35, SY1):                                      # left flight
+    line((SX0, y), (SXC - 0.075, y), "STAIR")
+for y in (2.8, 3.05, 3.3, SY1):                                                  # right flight
+    line((SXC + 0.075, y), (SX1, y), "STAIR")
+for a in range(180, 381, 20):                                                    # winders
     dx, dy = math.cos(math.radians(a)), math.sin(math.radians(a))
-    ts = [(21.6 - hub[0]) / dx]
-    ts += [(1.5 - hub[1]) / dy] if dy < 0 else [(4.1 - hub[1]) / dy] if dy > 0 else []
-    line(hub, mv(hub, (dx, dy), min(t for t in ts if t > 0)), "STAIR")
+    ts = [(SX0 - HUB[0]) / dx if dx < -1e-9 else (SX1 - HUB[0]) / dx if dx > 1e-9 else 1e9]
+    if dy < -1e-9:
+        ts.append((1.5 - HUB[1]) / dy)
+    line(HUB, mv(HUB, (dx, dy), min(ts)), "STAIR")
 for yy in (5.25, 5.65, 6.05, 6.45):                                              # entrance steps
-    line((22.0, yy), (24.0, yy), "STAIR")
-line((22.0, 5.25), (22.0, 6.45), "STAIR")
-line((24.0, 5.25), (24.0, 6.45), "STAIR")
+    line((SXC - 1.05, yy), (SXC + 1.05, yy), "STAIR")
+line((SXC - 1.05, 5.25), (SXC - 1.05, 6.45), "STAIR")
+line((SXC + 1.05, 5.25), (SXC + 1.05, 6.45), "STAIR")
 x = 15.3
 while x < 17.8:                                                                  # gully grating
     line((x, 5.75), (x + 0.1, 5.95), "PAVING")
     x += 0.2
 pline([(13.75, 3.8), (13.75, 6.1), (21.9, 6.1)], "PIPE")
-text("غرفة الادارة", (19.4, 3.45), 90, 0.35)
-text("غرفة العمال", (27.4, 3.45), 90, 0.35)
-dim((17.25, 1.9), (20.75, 1.9), (0, 1.9), "3.5")
+text("غرفة الادارة", (19.55, 3.45), 90, 0.35)
+text("غرفة العمال", (27.15, 3.45), 90, 0.35)
+dim((17.25, 1.9), (SX0 - WT, 1.9), (0, 1.9), "4.6")
 dim((17.6, 1.5), (17.6, 5.0), (17.6, 0), "3.5")
-dim((25.25, 1.9), (29.5, 1.9), (0, 1.9), "4.25")
+dim((SX1 + WT, 1.9), (29.5, 1.9), (0, 1.9), "4.7")
+dim((SX0, 4.2), (SX1, 4.2), (0, 4.2), "2.45", h=0.25)
 dim((29.1, 1.5), (29.1, 5.0), (29.1, 0), "3.5")
 dim((13.25, 2.0), (14.25, 2.0), (0, 2.0), "1.0", h=0.25)
 dim((19.0, 0.25), (19.0, 1.25), (19.0, 0), "1.0", h=0.25)
