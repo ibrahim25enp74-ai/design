@@ -1,3 +1,5 @@
 original.dxf
 out/
 sheetset_in.dxf
+__pycache__/
+fuel_station/*.zip
