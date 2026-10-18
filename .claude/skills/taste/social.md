@@ -1,5 +1,18 @@
 # Social media
 
+This file applies to every kind of post and account: an architecture office or student portfolio, real estate and project sales, retail and malls, restaurants and cafés, products, services, events, announcements, Ramadan and Eid, educational and explainer posts, recruitment, and personal brands. The method stays the same. The facts, references and archetype mix change with each account.
+
+### Purpose decides the archetype
+
+| Post purpose | Strong archetypes |
+|---|---|
+| Showing a project or product | Full-bleed image, detail crop, drawing as graphic, process |
+| Selling (units, shops, offers) | Number or fact, split, carousel that ends with one clear call to action |
+| Announcing (opening, event, date) | Typographic poster |
+| Explaining or educating | Carousel built on a diagram |
+| Occasions (Ramadan, Eid, national days) | Typographic poster or detail crop in the brand's own system. Never the stock crescent-and-lantern template. |
+| Trust (testimonials, team, behind the scenes) | Quote, real photo |
+
 ## Generic tells
 
 ### Visual
@@ -35,7 +48,7 @@ A series system cures both the generic look and the repetitive one. Define it on
 
 1. **Grid**: margins (at least 64 px at 1080 wide), columns, and a fixed baseline for the headline.
 2. **Type**: one display style and one text style, with sizes in px.
-3. **Palette**: from the brand or the subject. For an architecture office, sample the actual materials (brick, juss, Mosul marble, concrete) from their own photos.
+3. **Palette**: from the brand or the subject. Sample it from the account's own material: the building's materials for an architecture office, the food for a restaurant, the product for a product brand.
 4. **Signature move**: one recurring device.
 5. **Archetypes**: 5–7 layouts the series rotates through (list below).
 
@@ -68,7 +81,7 @@ Every post then uses the same system with a different composition.
 
 ## Copy
 
-- **Hook with a specific**: a number, a place, a material, a problem or a result. "٤٠٠ متر مربع من الظل في قلب السوق" beats "تصميم عصري يجمع بين الأصالة والمعاصرة".
+- **Hook with a specific**: a number, a place, a material, a problem or a result. "٤٠٠ متر مربع من الظل في قلب السوق" beats "تصميم عصري يجمع بين الأصالة والمعاصرة", and "خبز يطلع من الفرن كل ساعتين" beats "أشهى المخبوزات بأعلى جودة".
 - **One message per post**, with one concrete call to action ("احجز موعد", "شوف المشروع كامل"), not "تواصل معنا للمزيد".
 - **Register**: write the way the audience speaks. Use MSA for formal brands and Iraqi dialect when the brand speaks that way. Don't mix the two in one post.
 - **Hashtags**: 3–5 specific ones, not 30 generic ones.

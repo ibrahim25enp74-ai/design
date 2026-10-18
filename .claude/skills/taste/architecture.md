@@ -2,13 +2,36 @@
 
 ## Concept and form
 
+This file applies to every building type and scale: houses, housing, schools, hospitals, mosques, offices, retail, hotels, cultural buildings, interiors, landscape and urban design, competitions and student projects. Project-specific facts belong in `projects.md`, not here.
+
 Start from the site, the climate and the program. A form that responds to them is specific by default.
 
-- **Hot, dry sites** (Mosul and most of Iraq: summers above 40 °C, hard sun, dust): shade first. Use thermal mass, courtyards, cross-ventilation, deep reveals and openings sized by orientation.
-- **Orientation**: south facades get horizontal shading. East and west facades get vertical fins or smaller openings. North facades can open up. If every facade looks the same, the building is ignoring the sun.
-- **Heritage**: borrow principles, not ornaments. The mashrabiya means filtered light, privacy and airflow. Build those with perforated brick, timber screens or operable shutters, not a laser-cut pattern on a glass box. A courtyard is something you design in section, not a logo. Use an arch only where it actually spans something.
-- **Local materials**: brick, Mosul marble (المرمر الموصلي), juss (gypsum plaster), stone, concrete. Use them honestly and let them set the palette of the drawings and boards too.
-- **Souq-type projects**: covered streets, rhythm of shop bays, thresholds, clerestory light, khan courtyards, shade as the main public amenity. The concept usually lives in the section.
+### Climate
+
+| Climate | Start from |
+|---|---|
+| Hot, dry (Iraq, the Gulf, North Africa) | Shade first. Thermal mass, courtyards, cross-ventilation, deep reveals, small openings on east and west. |
+| Hot, humid | Airflow first. Raised floors, deep roof overhangs, permeable walls, cross-ventilation. Avoid materials that rust or trap water. |
+| Temperate | Daylight and seasonal sun. Openable facades, winter sun with summer shading. |
+| Cold | Compactness and insulation. Collect the low sun, give entrances a protected threshold. |
+
+- **Orientation** (northern hemisphere): south facades get horizontal shading. East and west facades get vertical fins or smaller openings. North facades can open up. If every facade looks the same, the building is ignoring the sun.
+
+### Context
+
+- **Heritage**: borrow principles, not ornaments. The mashrabiya means filtered light, privacy and airflow. Build those with perforated brick, timber screens or operable shutters, not a laser-cut pattern on a glass box. A courtyard is something you design in section, not a logo. Use an arch only where it actually spans something. The same applies to any local tradition.
+- **Local materials**: use what the place builds with (in Mosul, for example, brick, Mosul marble, juss and stone). Use them honestly and let them set the palette of the drawings and boards too.
+
+### Program
+
+The concept usually comes from the program's own logic:
+- **Retail and markets**: movement, shop rhythm, thresholds, shade.
+- **Schools**: the in-between spaces where children actually spend their time.
+- **Housing**: privacy gradients, from street to threshold to court to room.
+- **Healthcare**: daylight and the shortest routes.
+- **Mosques**: the qibla axis, light and the transition from street to prayer.
+
+Ask what this program does that no other program does, and design that.
 
 ### Generic tells (architecture)
 
@@ -37,7 +60,7 @@ Every drawing needs at least three distinguishable weights: cut, then projection
 
 ### Rules
 
-- Set line weights and colours by layer, not per entity. Follow the file's existing layer scheme (this repo uses `A3_SHEET` for sheet borders and `TB*` for title blocks) rather than inventing a second one.
+- Set line weights and colours by layer, not per entity. Follow the file's existing layer scheme rather than inventing a second one.
 - **Poché**: use a solid fill for cut walls at 1:100 and smaller, and hatch patterns at 1:50 and larger. Use no more than three hatch patterns per sheet, always lighter than the lines around them.
 - **Colour**: plot in black and greys. Use one accent colour, and only for the message: new versus existing, circulation, the intervention. No ACI rainbow plots.
 - **Text at A3, 100%**: sheet titles 5–7 mm, drawing titles 3.5–5 mm, labels 2.5 mm, notes at least 1.8 mm. Use one font family and named text styles, not ad-hoc heights.
@@ -55,7 +78,7 @@ Every drawing needs at least three distinguishable weights: cut, then projection
 - Order the set logically (site, plans, sections, elevations, details) and number the sheets sequentially.
 - The title block is quiet, small and grey. The drawing is the hero, not the logo.
 - Images on sheets (aerials, renders, photos) get one shared treatment across the set: either all full-bleed or all framed, with one colour grade.
-- Check one sheet plotted at 100% and read the smallest text. In this repo, `plot_sheet_set.py` produces the PDF to check.
+- Check one sheet plotted at 100% and read the smallest text.
 
 ## Boards, diagrams and renders
 

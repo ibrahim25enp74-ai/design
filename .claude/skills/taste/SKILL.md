@@ -5,6 +5,8 @@ description: Method for tasteful, non-generic, non-repetitive design in architec
 
 # Taste
 
+This skill covers any architecture project and any social media account or post, of any type, scale or sector. Project-specific knowledge lives in `projects.md` and `precedents.md`, never in the method. When a new project or account appears, give it its own section in those files.
+
 A design looks generic when every decision is the default: the first idea, the familiar palette, the template layout, the stock phrase. Here taste means two things. Every visible decision traces back to something true about *this* project, or to something the user has told you they like. And the set of decisions is small and holds together. This file is a method, not a mood board. Follow the steps in order.
 
 The files next to this one:
@@ -44,7 +46,7 @@ Every major decision (concept, form, palette, typeface, image, headline) has to 
 
 Before designing, search for the best existing work of the same type, in both domains. Check `precedents.md` first, and only search for what isn't there yet.
 
-- **Architecture**: search ArchDaily, Dezeen and Architizer (including the A+Awards winners), then Archnet and the Aga Khan Award for Architecture for the Islamic world, plus Designboom and Architectural Record. Search by project type and climate, for example "covered market hot climate", "souq rehabilitation" or "commercial courtyard shade". Built, published or awarded projects in a similar climate or culture count most.
+- **Architecture**: search ArchDaily, Dezeen and Architizer (including the A+Awards winners), then Archnet and the Aga Khan Award for Architecture for the Islamic world, plus Designboom and Architectural Record. Search by project type, climate and scale, whatever the project is: "school courtyard hot climate", "social housing low-rise", "mosque contemporary daylight", "covered market shade", "clinic small budget". Built, published or awarded projects in a similar climate or culture count most.
 - **Social media**: search Behance (and Dribbble) for campaigns of the same type, Ads of the World and the D&AD and Cannes Lions archives for award-level campaigns, and Fonts In Use for type. Also look at the official accounts of the user's reference architects (see `preferences.md`) and of strong regional brands in the same sector.
 
 Pick 4–8 of the best and write down one concrete **lesson** from each: a principle, a section or a device. Never write down the look. "The roofs slide open for ventilation" is a lesson. "White lattice" is a look. Add the lessons to `precedents.md` under the project, with links.
