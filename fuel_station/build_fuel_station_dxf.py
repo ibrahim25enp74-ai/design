@@ -15,6 +15,7 @@ horizontal, front-left corner at 0,0, y up).
 usage: python build_fuel_station_dxf.py OUT.dxf
 """
 import math
+import os
 import sys
 
 import ezdxf
@@ -808,4 +809,54 @@ e.set_location((63.4, -6.6), attachment_point=MTextEntityAlignment.MIDDLE_RIGHT)
 
 doc.set_modelspace_vport(height=85, center=(23, 22))
 doc.saveas(OUT)
+
+# ================================================================== items for the discipline sets
+# Plot-frame positions of everything the safety, electrical and sanitary designs depend on.
+ITEMS = {
+    "plot": [list(p) for p in PLOT.exterior.coords[:-1]],
+    "rooms": {
+        "transformer": [1.5, 1.5, 7.5, 5.5], "generator": [7.75, 1.5, 11.25, 5.5],
+        "wc1": list(r_wc.bounds), "admin": list(r_adm.bounds), "stair": list(r_hall.bounds),
+        "workers": list(r_wrk.bounds), "spares": [32.25, 1.5, 36.0, 5.0], "paints": [36.25, 1.5, 40.0, 5.0],
+        "prayer": [40.25, 1.5, 43.75, 5.0], "wc2": [44.0, 1.5, 45.0, 5.0],
+    },
+    "buildings": [list(B1.bounds), list(B2.bounds), list(B3.bounds)],
+    "garden": list(g_poly.bounds),
+    "well": [5.75, 6.75, 7.75, 8.25],
+    "tank_area": {"x0": XL, "x1": W, "walls_y": [Y0, Y1, Y2, SEP, Y3], "wt": WT},
+    "compartments": {
+        "C1": [XL + WT, Y0 + WT, W - WT, Y1], "C2": [XL + WT, Y1 + WT, W - WT, Y2],
+        "C3a": [XL + WT, Y2 + WT, W - WT, SEP], "C3b": [XL + WT, SEP + WT, W - WT, Y3],
+    },
+    "tanks": [
+        {"tag": "T-01", "x0": TL54, "x1": TR54, "yc": yc_go, "d": D54, "cmp": "C1"},
+        {"tag": "T-02", "x0": XL + WT + 2.0, "x1": XL + WT + 9.0, "yc": yA, "d": D23, "cmp": "C2"},
+        {"tag": "T-03", "x0": XL + WT + 1.8, "x1": XL + WT + 8.8, "yc": yB, "d": D23, "cmp": "C2"},
+        {"tag": "T-04", "x0": TL54, "x1": TR54, "yc": yc_b1, "d": D54, "cmp": "C3a"},
+        {"tag": "T-05", "x0": TL54, "x1": TR54, "yc": yc_b2, "d": D54, "cmp": "C3a"},
+        {"tag": "T-06", "x0": TL54, "x1": TR54, "yc": yc_k, "d": D54, "cmp": "C3b"},
+    ],
+    "lpg_pump": list(pump.bounds),
+    "fill_points": [{"product": p, "xy": [36.5, y]} for p, y in zip(("GAS OIL", "LPG", "GASOLINE", "KEROSENE"), FP_Y)],
+    "islands": [
+        {"tag": f"I-{k + 1}", "product": ("GAS OIL", "LPG", "GASOLINE")[k],
+         "outline": [list(isl(Q, 0, 0)), list(isl(Q, ISL_L, 0)), list(isl(Q, ISL_L, ISL_W)), list(isl(Q, 0, ISL_W))],
+         "dispensers": [list(isl(Q, 2.0, ISL_W / 2)), list(isl(Q, 8.0, ISL_W / 2))],
+         "post": list(isl(Q, 5.0, ISL_W / 2))}
+        for k, Q in enumerate(QS)
+    ] + [
+        {"tag": "I-4", "product": "KEROSENE", "outline": [list(p) for p in plat.exterior.coords[:-1]],
+         "dispensers": [[41.75, yI], [45.25, yI]], "post": [43.5, yI]},
+        {"tag": "I-5", "product": "KEROSENE (CARTS)", "outline": [[37.6, ZY0 + 1.6], [38.4, ZY0 + 1.6], [38.4, ZY0 + 4.3], [37.6, ZY0 + 4.3]],
+         "dispensers": [[38.0, ZY0 + 3.0]], "post": None},
+    ],
+    "canopy": [list(p) for p in cv],
+    "kerosene_yard": {"x0": ZX0, "y0": ZY0, "x1": ZX1},
+    "gates": {"exit": [2.0, 12.0], "entry": [31.28, 41.28], "yard": [49.28, 54.28]},
+    "manhole": [47.0, 61.0, 48.5, 62.5],
+}
+import json  # noqa: E402
+
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "site_items.json"), "w") as fh:
+    json.dump(ITEMS, fh, indent=1)
 print("saved", OUT)

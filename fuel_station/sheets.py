@@ -11,7 +11,7 @@ import ezdxf
 from ezdxf.addons import Importer
 from ezdxf.enums import MTextEntityAlignment, TextEntityAlignment
 
-from site_base import LL, LR, W, o
+from site_base import LL, LR, TH, W, o
 
 ARABIC = re.compile("[؀-ۿ]")
 
@@ -150,24 +150,39 @@ class Sheet:
         return y
 
     # ---------------------------------------------------------------- model content
-    def place_site(self, window, area=(20, 10, 335, 287), block="X-ARCH-SITE"):
-        """Insert the site background so the sheet-frame window is centred in the drawing area."""
-        self.window = window
+    def place_site(self, window, area=(20, 10, 335, 287), block="X-ARCH-SITE", plan_up=False):
+        """Insert the site background centred in the drawing area.
+
+        plan_up=False: site-plan orientation (street front horizontal), window in the site-plan frame.
+        plan_up=True: plan turned so the 50 m rear boundary is horizontal at the top; window is
+        given in the plot frame (x0, y0, x1, y1) and the plot maps to (x, LL - y).
+        """
+        self.window = None if plan_up else window
+        self.plan_up = plan_up
         wx0, wy0, wx1, wy1 = window
+        if plan_up:
+            wx0, wy0, wx1, wy1 = wx0, LL - wy1, wx1, LL - wy0
         ax0, ay0, ax1, ay1 = area
         cx, cy = self.p((ax0 + ax1) / 2, (ay0 + ay1) / 2)
         self.dx = cx - (wx0 + wx1) / 2
         self.dy = cy - (wy0 + wy1) / 2
         if block:
-            self.msp.add_blockref(block, (self.dx, self.dy), dxfattribs={"layer": "X-ARCH"})
+            rot = -math.degrees(TH) if plan_up else 0.0
+            self.msp.add_blockref(block, (self.dx, self.dy), dxfattribs={"layer": "X-ARCH", "rotation": rot})
         return self
 
     def s(self, sheet_pt):
-        """Sheet-frame point (site plan coordinates) -> model point on this sheet."""
-        return (sheet_pt[0] + self.dx, sheet_pt[1] + self.dy)
+        """Site-plan frame point -> model point on this sheet."""
+        x, y = sheet_pt
+        if getattr(self, "plan_up", False):
+            c, sn = math.cos(-TH), math.sin(-TH)
+            x, y = x * c - y * sn, x * sn + y * c
+        return (x + self.dx, y + self.dy)
 
     def f2m(self, plot_pt):
         """Plot-frame point -> model point on this sheet."""
+        if getattr(self, "plan_up", False):
+            return (plot_pt[0] + self.dx, LL - plot_pt[1] + self.dy)
         return self.s(o(plot_pt))
 
     # ---------------------------------------------------------------- title block
