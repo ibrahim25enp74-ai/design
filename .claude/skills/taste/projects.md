@@ -34,7 +34,7 @@ The skill should build on these, not replace them:
 These are taste observations, not the user's preferences. Raise them when working on the set, and ask before changing anything:
 
 - **Titles**: drawing titles are bright red (ACI red) and switch position, top-left on some sheets and centred under the drawing on others. Pick one position and one quieter colour.
-- **Colour**: dimensions and annotations use red, blue and cyan together (ACI rainbow). The landscape plans (L-101, L-103) and the zoning plan (A-003) use saturated yellow, orange and green fills. A greyscale base with one meaningful accent would read more professional.
+- **Colour**: dimensions and annotations use red, blue and cyan together (ACI rainbow). Keep these technical layers grey or black. The landscape plans (L-101, L-103) and the zoning plan (A-003) use saturated yellow, orange and green fills. Given the user likes 100 Architects, keep the boldness but make it one coherent palette that repeats across all the landscape and diagram sheets, instead of muting it.
 - **Scale**: several sheets have a small drawing floating in a large empty field (A-203, A-204, L-104, A-402). Scale the drawing up or pair it with another.
 - **Line weights**: walls, furniture and dimensions plot at similar weights on several plans. Separate cut, projection and annotation more clearly.
 
