@@ -13,6 +13,30 @@ SRC, DST = sys.argv[1], sys.argv[2]
 doc = ezdxf.readfile(SRC)
 msp = doc.modelspace()
 
+ARABIC = re.compile("[؀-ۿ]")
+
+
+def arabic_to_visual(doc):
+    """The renderer has no bidi/shaping: plot Arabic text in visual order (DXF is untouched)."""
+    try:
+        import arabic_reshaper
+        from bidi.algorithm import get_display
+    except ImportError:
+        return
+
+    def fix(s):
+        return get_display(arabic_reshaper.reshape(s)) if ARABIC.search(s) else s
+
+    for layout_ in [msp, *doc.blocks]:
+        for e in layout_:
+            if e.dxftype() == "TEXT":
+                e.dxf.text = fix(e.dxf.text)
+            elif e.dxftype() == "MTEXT":
+                e.text = "\\P".join(fix(s) for s in e.text.split("\\P"))
+
+
+arabic_to_visual(doc)
+
 sheets = []
 for e in msp.query('LWPOLYLINE[layer=="A3_SHEET"]'):
     xs, ys = zip(*e.get_points("xy"))
