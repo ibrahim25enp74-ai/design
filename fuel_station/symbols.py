@@ -295,5 +295,46 @@ def define(doc):
 def insert(sheet, code, model_pt, layer=None, angle=0.0, scale=1.0):
     """Place a symbol at a model point, sized for the sheet scale."""
     lay = layer or next(l for g in SYMBOLS.values() for c, l, *_ in g if c == code)
+    used = sheet.__dict__.setdefault("used_symbols", [])
+    if code not in used:
+        used.append(code)
     return sheet.msp.add_blockref("SYM-" + code, model_pt, dxfattribs={
         "layer": lay, "xscale": sheet.f * scale, "yscale": sheet.f * scale, "rotation": angle})
+
+
+def line_key(sheet, layer, en, ar, color=None, linetype="CONTINUOUS", width_mm=0.0):
+    """Record a line type drawn on the sheet so it appears in that sheet's legend."""
+    keys = sheet.__dict__.setdefault("used_lines", [])
+    k = (layer, en, ar, color, linetype, width_mm)
+    if k not in keys:
+        keys.append(k)
+
+
+def draw_legend(sheet, x=249.0, y_bottom=12.0, widths=(10, 44, 29)):
+    """Legend of the symbols and line types used on this sheet, built upwards from y_bottom."""
+    syms = getattr(sheet, "used_symbols", [])
+    lines = getattr(sheet, "used_lines", [])
+    if not syms and not lines:
+        return
+    info = {c: (l, en, ar) for g in SYMBOLS.values() for c, l, en, ar, _f in g}
+    row, head = 4.4, 4.0
+    n = len(syms) + len(lines)
+    top = y_bottom + head + n * row
+    sheet.text("LEGEND - مفتاح الرموز", x, top + 1.6, 2.2, "TB_HEADINGS")
+    rows = [("", "DESCRIPTION", "الوصف")]
+    rows += [("", info[c][1][:34], info[c][2]) for c in syms]
+    rows += [("", en[:34], ar) for _l, en, ar, *_ in lines]
+    sheet.table(x, top, widths, rows, row_h=row, h=1.15, header_h=head)
+    y = top - head - row / 2
+    cx = x + widths[0] / 2
+    for c in syms:
+        insert(sheet, c, sheet.p(cx, y), info[c][0], scale=0.85)
+        y -= row
+    for layer, _en, _ar, color, lt, wmm in lines:
+        att = {"layer": layer, "linetype": lt, "ltscale": 0.25}
+        if color is not None:
+            att["color"] = color
+        e = sheet.msp.add_lwpolyline([sheet.p(x + 1.5, y), sheet.p(x + widths[0] - 1.5, y)], dxfattribs=att)
+        if wmm:
+            e.dxf.const_width = wmm * sheet.f
+        y -= row

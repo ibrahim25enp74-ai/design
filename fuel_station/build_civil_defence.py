@@ -64,6 +64,8 @@ def notes(sh, x, y, heading, lines, h=1.55, step=3.0, layer="G-TEXT"):
 def draw_fire_installation(p, full=True):
     """Fire tank, pump room, main, hydrants, hose reels and LPG deluge (shared by F-002/F-005)."""
     p.pline(rect(FIRE_TANK), "F-PIPE", close=True, linetype="DASHED", ltscale=0.4)
+    symbols.line_key(p.sh, "F-PIPE", "UNDERGROUND FIRE WATER TANK", "خزان ماء الحريق الارضي", linetype="DASHED")
+    symbols.line_key(p.sh, "F-PIPE", "FIRE PUMP ROOM (HATCHED)", "غرفة مضخات الحريق")
     p.text("FIRE WATER TANK (UNDERGROUND)\\P" + f"{fw['tank']} m3 NET", ((FIRE_TANK[0] + FIRE_TANK[2]) / 2, (FIRE_TANK[1] + FIRE_TANK[3]) / 2),
            1.7, "F-TEXT", angle=0)
     p.pline(rect(PUMP_ROOM), "F-PIPE", close=True)
@@ -71,6 +73,10 @@ def draw_fire_installation(p, full=True):
     p.leader(((PUMP_ROOM[0] + PUMP_ROOM[2]) / 2, PUMP_ROOM[1] + 0.5), (12.9, -4.0), "FIRE PUMP ROOM", 1.6, "F-TEXT")
     if not full:
         return
+    symbols.line_key(p.sh, "F-PIPE", "FIRE WATER MAIN HDPE 110 mm", "خط ماء الحريق الرئيسي", width_mm=0.5)
+    symbols.line_key(p.sh, "F-PIPE", "PUMP SUCTION LINE", "خط سحب المضخات", linetype="DASHED", width_mm=0.35)
+    symbols.line_key(p.sh, "F-PIPE", "SPRAY RING ROUND LPG TANK", "حلقة رش تبريد خزان الغاز", width_mm=0.25)
+    symbols.line_key(p.sh, "F-TEXT", "DV = DELUGE VALVE", "صمام الاغراق", color=1)
     p.pline(MAIN, "F-PIPE", width_mm=0.5)
     p.pline(BRANCH_W, "F-PIPE", width_mm=0.5)
     p.pline(SUCTION, "F-PIPE", width_mm=0.35, linetype="DASHED", ltscale=0.3)
@@ -108,6 +114,9 @@ bunds = safety.bunds()
 
 # ================================================================== F-001 safety distances
 sh, p = plan_sheet("F-001")
+symbols.line_key(sh, "F-PASS", "MEASURED DISTANCE - COMPLIES", "مسافة مقاسة - مطابقة", color=GREEN)
+symbols.line_key(sh, "F-FAIL", "MEASURED DISTANCE - SHORTFALL", "مسافة مقاسة - غير مطابقة", color=RED)
+symbols.line_key(sh, "F-ZONE", "15 m FROM LPG TANKS", "مسافة 15 م من خزانات الغاز", color=RED, linetype="DASHED")
 for c in checks:
     col = GREEN if c["ok"] else RED
     lay = "F-PASS" if c["ok"] else "F-FAIL"
@@ -314,6 +323,8 @@ for r in routes:
 from site_base import fr  # noqa: E402
 tanker = [fr(36.3, 1.5), (34.4, 48.0), (34.4, 10.5), (31.0, 8.8), (13.0, 8.8), (9.5, 10.5), (8.0, 20.0), (6.5, 33.0)]
 p.pline(tanker, "F-TANKER", width_mm=0.5, color=30, linetype="DASHED", ltscale=0.6)
+symbols.line_key(sh, "F-ROUTE", "ESCAPE ROUTE TO ASSEMBLY POINT", "مسار الاخلاء الى نقطة التجمع", color=GREEN, width_mm=0.6)
+symbols.line_key(sh, "F-TANKER", "FUEL TANKER ROUTE", "مسار الصهريج", color=30, linetype="DASHED", width_mm=0.5)
 p.text("TANKER ROUTE: IN AT THE ENTRY, UNLOAD FORWARD-FACING AT THE CURB, OUT THROUGH THE EXIT - NO REVERSING",
        (20.0, 9.9), 1.35, "F-TEXT", color=30)
 for gate, lab in (("exit", "EXIT 10 m"), ("entry", "ENTRY 10 m"), ("yard", "YARD GATE 5 m")):
@@ -386,6 +397,8 @@ box_(30, 140, 100, 165, "CIVIL DEFENCE INLET\\P2 x 65 mm BREECHING (FRONT)", 1.5
 L((100, 152), (170, 152), "F-PIPE")
 symbols.insert(sh, "NRV", sh.p(135, 152), "F-PIPE")
 T("FIRE WATER SYSTEM - SCHEMATIC (NOT TO SCALE)", 30, 270, 3.0, "TB_HEADINGS")
+sh.legend_at = (249.0, 15.0)
+symbols.line_key(sh, "F-PIPE", "FIRE WATER PIPE", "انبوب ماء الحريق")
 for k, s in enumerate([
     "1. PUMP SET TO NFPA 20: JOCKEY STARTS AT 7.0 bar, MAIN AT 6.0 bar, DIESEL AT 5.5 bar;",
     "   MAIN AND DIESEL STOP MANUALLY ONLY.",
@@ -464,6 +477,10 @@ for k, s in enumerate([
 ]):
     T(s, 30, yb - 6 - 3.4 * k, 1.6, "G-TEXT")
 T("TANK AREA - BUND PLAN 1:150", 30, 280, 3.0, "TB_HEADINGS")
+sh.legend_at = (130.0, 15.0)
+symbols.line_key(sh, "S-CONC", "RC BUND / COMPARTMENT WALL, SADDLE", "جدار الحوض الخرساني، قاعدة الخزان")
+symbols.line_key(sh, "F-SYMB", "ABOVEGROUND TANK (OUTLINE)", "خزان فوق الارض")
+symbols.line_key(sh, "F-PIPE", "SUMP AND DRAIN PIPE", "حوضة التجميع وانبوب التصريف")
 # typical bund section
 SX, SY = 225, 70
 sh.rect(SX, SY, SX + 4, SY + 6.67, "S-CONC")
@@ -514,6 +531,7 @@ T("Ex d IIB T4 STATION, RED MUSHROOM, LATCHING", 240, 175, 1.5, "G-TEXT")
 T("ON A POST 1.2 m ABOVE GROUND; ALL BUTTONS", 240, 171, 1.5, "G-TEXT")
 T("IN SERIES IN THE DISPENSER CONTROL CIRCUIT.", 240, 167, 1.5, "G-TEXT")
 det(25, 20, 310, 130, "4  SAFETY SIGNS (MIN. 600 x 400 mm, REFLECTIVE)")
+sh.legend_at = False
 signs = [("NO SMOKING", "ممنوع التدخين"), ("STOP ENGINE", "اطفئ المحرك"), ("NO MOBILE PHONES", "ممنوع استخدام الهاتف"),
          ("LPG - FLAMMABLE GAS", "غاز سائل - قابل للاشتعال"), ("EMERGENCY STOP", "ايقاف الطوارئ"), ("ASSEMBLY POINT", "نقطة تجمع")]
 for k, (en, ar) in enumerate(signs):

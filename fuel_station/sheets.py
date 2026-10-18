@@ -345,7 +345,10 @@ class SheetSet:
         return sh
 
     def finish(self, path):
+        import symbols
         for sh in self.sheets:
+            if getattr(sh, "legend_at", True):
+                symbols.draw_legend(sh, *(sh.legend_at if isinstance(getattr(sh, "legend_at", None), tuple) else ()))
             sh.draw_frame(len(self.sheets))
         self.doc.set_modelspace_vport(height=300 * self.sheets[0].f, center=self.sheets[0].p(210, 148.5))
         self.doc.saveas(path)
