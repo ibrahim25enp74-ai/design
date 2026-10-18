@@ -10,6 +10,7 @@ A design looks generic when every decision is the default: the first idea, the f
 The files next to this one:
 
 - `preferences.md`: the user's own taste, learned from their feedback. **Read it first, every time.** It overrides everything else here.
+- `precedents.md`: the best existing projects and campaigns of the same type, with the lesson taken from each (step 1b).
 - `projects.md`: the facts for each of the user's projects (site, program, concept threads). Read the project's section in step 1.
 - `architecture.md`: concept, facades, plans, CAD drawings, sheet sets, boards, renders.
 - `social.md`: posts, carousels, stories, feed series, captions.
@@ -38,6 +39,17 @@ Read `preferences.md`. Apply the firm preferences that match the task's scope (g
 Before choosing any form, colour or font, read the project's section in `projects.md`, then write down 3–5 facts that belong only to this project. Sources: the site, the climate, the brief or program, the client or brand, the audience, the materials, local history, a hard constraint (budget, plot shape, regulation), the actual product or service.
 
 Every major decision (concept, form, palette, typeface, image, headline) has to point to at least one of these facts. When information is missing, ask once or state the assumption you made. Don't fill the gap with a generic default.
+
+## 1b. Research precedents
+
+Before designing, search for the best existing work of the same type, in both domains. Check `precedents.md` first, and only search for what isn't there yet.
+
+- **Architecture**: search ArchDaily, Dezeen and Architizer (including the A+Awards winners), then Archnet and the Aga Khan Award for Architecture for the Islamic world, plus Designboom and Architectural Record. Search by project type and climate, for example "covered market hot climate", "souq rehabilitation" or "commercial courtyard shade". Built, published or awarded projects in a similar climate or culture count most.
+- **Social media**: search Behance (and Dribbble) for campaigns of the same type, Ads of the World and the D&AD and Cannes Lions archives for award-level campaigns, and Fonts In Use for type. Also look at the official accounts of the user's reference architects (see `preferences.md`) and of strong regional brands in the same sector.
+
+Pick 4–8 of the best and write down one concrete **lesson** from each: a principle, a section or a device. Never write down the look. "The roofs slide open for ventilation" is a lesson. "White lattice" is a look. Add the lessons to `precedents.md` under the project, with links.
+
+Precedents feed directions B and C in step 2. Never copy them. If a precedent is the most-published example of its type, it is probably someone else's direction A, so take its principle and leave its image.
 
 ## 2. Kill the first idea
 
