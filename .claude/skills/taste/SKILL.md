@@ -10,6 +10,7 @@ A design looks generic when every decision is the default: the first idea, the f
 The files next to this one:
 
 - `preferences.md`: the user's own taste, learned from their feedback. **Read it first, every time.** It overrides everything else here.
+- `projects.md`: the facts for each of the user's projects (site, program, concept threads). Read the project's section in step 1.
 - `architecture.md`: concept, facades, plans, CAD drawings, sheet sets, boards, renders.
 - `social.md`: posts, carousels, stories, feed series, captions.
 - `arabic-type.md`: any Arabic text in either domain (fonts, RTL, shaping, numerals).
@@ -34,7 +35,7 @@ Read `preferences.md`. Apply the firm preferences that match the task's scope (g
 
 ## 1. Find the specific
 
-Before choosing any form, colour or font, write down 3–5 facts that belong only to this project. Sources: the site, the climate, the brief or program, the client or brand, the audience, the materials, local history, a hard constraint (budget, plot shape, regulation), the actual product or service.
+Before choosing any form, colour or font, read the project's section in `projects.md`, then write down 3–5 facts that belong only to this project. Sources: the site, the climate, the brief or program, the client or brand, the audience, the materials, local history, a hard constraint (budget, plot shape, regulation), the actual product or service.
 
 Every major decision (concept, form, palette, typeface, image, headline) has to point to at least one of these facts. When information is missing, ask once or state the assumption you made. Don't fill the gap with a generic default.
 
