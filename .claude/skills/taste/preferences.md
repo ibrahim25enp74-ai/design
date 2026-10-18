@@ -31,6 +31,7 @@ Entry format:
 
 - [tentative] Open to bold, saturated colour in public space and diagrams when it is applied as a system (100 Architects). Don't push the greyscale default on landscape or diagram sheets; push for consistency instead. (2026-10-18, named 100 Architects as a favourite; traits not yet confirmed)
 - [tentative] Values concepts driven by program and diagram over style (OMA). Explain each design with a clear diagram of the idea. (2026-10-18, named OMA as a favourite; traits not yet confirmed)
+- [tentative] Likes architecture that performs: structure and climate response (shading roofs, daylight, ventilation) are the design, with precise detailing and clean technical drawings (Foster). For the souq, the shading of the corridors and plazas is the obvious place for this. (2026-10-18, named Foster as a favourite; traits not yet confirmed)
 
 ## Social media
 
@@ -50,7 +51,8 @@ Entry format:
 
 - **Likes 100 Architects** (Shanghai, "urban activators"). Likely traits, not yet confirmed: saturated flat colour; playful geometric public space; graphic floor patterns that work as plan drawings; designs built for people to interact with and photograph. (2026-10-18)
 - **Likes OMA** (Rem Koolhaas). Likely traits, not yet confirmed: program-first concepts; bold massing (stacked, shifted, cut); diagrams and collages as the main presentation tool; flat colour diagrams with big type; unexpected, raw materials. (2026-10-18)
-- **The two together**: bold and unexpected, never safe beige. A clear idea before form. Colour as a tool, not decoration.
+- **Likes Foster + Partners**. Likely traits, not yet confirmed: structure and environmental performance as the architecture (big shading roofs and canopies, daylight, natural ventilation, as at Masdar and the Great Court); precise, refined detailing; clean technical drawings; a restrained material palette of steel, glass and light stone. (2026-10-18)
+- **The three together**: a clear idea before form (OMA). Precision, structure and climate performance in the building and the drawings (Foster). Bold, systematic colour in public space and diagrams (100 Architects). Never safe beige, never decoration for its own sake.
 
 ## History
 
