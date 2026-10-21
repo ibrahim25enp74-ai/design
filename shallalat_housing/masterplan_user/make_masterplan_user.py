@@ -20,7 +20,7 @@ NAMES = {
     "POLICE": ("POLICE", "الشرطة"), "CIVIL_DEF": ("CIVIL DEFENCE", "الدفاع المدني"), "HEALTH": ("HEALTH CENTRE", "المركز الصحي"),
     "SECONDARY": ("SECONDARY SCHOOL", "الثانوية (متوسطة + إعدادية)"), "PRIMARY": ("PRIMARY SCHOOL", "المدرسة الابتدائية"),
     "KG": ("KINDERGARTEN", "الروضة"), "WATER": ("WATER STATION", "محطة الماء"), "POWER": ("POWER STATION", "محطة الكهرباء"),
-    "WASTE": ("WASTE", "النفايات"), "CLUB": ("SOCIAL CLUB + SPORTS", "النادي والملاعب"),
+    "WASTE": ("WASTE", "النفايات"),
     "PARK_MALL": ("PARKING", "موقف السيارات"), "G_HEALTH": ("GARDEN", "حديقة"), "G_MALL": ("GARDEN", "حديقة"),
     "G_KG": ("GARDEN", "حديقة"), "G_PRIM": ("GARDEN", "حديقة"),
 }
@@ -30,7 +30,7 @@ UTIL_KEYS = ("WATER", "POWER", "WASTE")
 def table_rows():
     units = len(VILLAS) + len(HOUSES) + N_APTS
     rows = [
-        "IBRAHIM'S PROPOSAL - DEVELOPED, REV 3 - مقترح ابراهيم المطور، تعديل 3",
+        "IBRAHIM'S PROPOSAL - DEVELOPED, REV 4 - مقترح ابراهيم المطور، تعديل 4",
         "Plot 157 / District 53 Baybokht - NIC 5/2026 - UTM 38S",
         "",
         f"UNITS: {len(VILLAS)} villas 400 m2 + {len(HOUSES)} houses 240 m2 + {N_APTS} flats = {units}",
@@ -313,7 +313,7 @@ def write_preview(png, pdf):
     ax.set_aspect("equal")
     ax.axis("off")
 
-    fig.text(0.5, 0.965, "المخطط العام - مقترح ابراهيم المطوّر (تعديل 3)   |   MASTER PLAN - IBRAHIM'S PROPOSAL, DEVELOPED - REV 3",
+    fig.text(0.5, 0.965, "المخطط العام - مقترح ابراهيم المطوّر (تعديل 4)   |   MASTER PLAN - IBRAHIM'S PROPOSAL, DEVELOPED - REV 4",
              ha="center", fontsize=26, fontweight="bold")
     fig.text(0.5, 0.945, "مجمع الشلالات السكني - القطعة 157 م53 بايبوخت - فرصة هيئة استثمار نينوى 5/2026", ha="center", fontsize=15)
     rows = table_rows()
@@ -357,7 +357,8 @@ def write_preview(png, pdf):
         "تعديل 1: الأشرطة الخضراء بين الصفوف صارت 40 م بدل 15 م.",
         "تعديل 1: حول الدوار خدمات يومية فقط وسط حدائق: مول وموقفه،",
         "صحي 1000، جامع 2000، روضة 1500، ابتدائية 3000.",
-        "الثانوية 5000 بجانب النادي والملاعب 5000 في المنطقة الغربية،",
+        "تعديل 4: ألغي النادي، ومساحته صارت جزءا من الحديقة الغربية.",
+        "الثانوية 5000 في المنطقة الغربية فوق المرافق،",
         "والشرطة 600 والدفاع المدني 600 عند بوابة الخدمة مع الماء والكهرباء والنفايات.",
         "البلازا: نزول عند المحور، ممشى بقناة ماء بين البرجين A وB،",
         "ساحة نافورة بين B وC، أرصفة حول الأبراج، مسطحات ومسار متعرج،",

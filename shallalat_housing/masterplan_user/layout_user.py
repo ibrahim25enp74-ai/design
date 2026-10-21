@@ -172,13 +172,12 @@ OPEN["G_KG"] = r
 SERV["PRIMARY"], r = cut(RED["ES"], 3000, "v", "min")
 OPEN["G_PRIM"] = r
 # west zone: utilities, police and civil defence (600 m2 each) on the south road by the service gate, then the
-# secondary school beside the club's sports fields, the rest is the park
+# secondary school (the club was dropped in rev 4), the rest is the park
 UT, r = cut(PINK, 2000, "v", "min")
 SERV["WATER"], SERV["POWER"] = cut(UT, 1000, "u", "min")
 UT, r = cut(r, 1500, "v", "min")
 SERV["WASTE"], ut = cut(UT, 300, "u", "min")
 SERV["POLICE"], SERV["CIVIL_DEF"] = cut(ut, 600, "u", "min")
-SERV["CLUB"], r = cut(r, 5000, "v", "min")
 SERV["SECONDARY"], r = cut(r, 5000, "v", "min")
 BIG_PARK = r
 
