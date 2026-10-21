@@ -76,17 +76,21 @@ LANE = 7.0  # cul-de-sac (shared surface); 7 + 2 x front setback >= 12 m between
 COURT = 6.0  # green court between the back gardens of two clusters
 FINGER = 20.0  # green finger with rain channel
 ENDGAP = 6.0  # turning head where a cul-de-sac meets the park
-EAST0 = 712.0  # east service zone (school, club, utilities) starts here
-EAST_GREEN = 10.0  # green strip with the jogging track between the houses and the east zone
+EB = 784.0  # east connector (12 m) joining the south and north legs at the east end
+UT0 = 766.0  # utilities (water, power, waste) at the south-east corner start here
+EAST_END = 836.0  # the core runs to the east end of the plot
 VILLA = dict(f=16.0, d=25.0, front=4.0, side=2.0, bw=12.0, bd=10.0)  # 400 m2, 120 m2 footprint = 30 %
-HOUSE = dict(f=10.0, d=20.0, front=2.5, side=0.0, bw=10.0, bd=12.0)  # 200 m2, 120 m2 footprint = 60 %
+HOUSE = dict(f=12.0, d=20.0, front=2.5, side=0.0, bw=12.0, bd=12.0)  # 240 m2, 144 m2 footprint = 60 %
+TARGET = {"villa": 80, "house": 88}  # client programme, rev 2 (2026-10-21)
 
 S_LEG = (BELT + OUTER, BELT + OUTER + LEG)  # v range of the south leg
-GATE_U = 458.0  # main gate / entry street axis (~450 m from the west end of the north edge)
+GATE_U = 458.0
+MALL_W, MALL_E = 400.0, 30.0  # mall wings either side of the boulevard
+# main gate / entry street axis (~450 m from the west end of the north edge)
 BLVD = 24.0
-NU0 = 196.0  # the outer north row starts here; west of it a tree screen faces the towers
-PLAZA = (424.0, 492.0)  # u range of the plaza
-LINK = (480.0, 492.0)  # the one street that crosses the park (plaza -> south leg)
+NU0 = 164.0  # the outer north row starts here; west of it a tree screen faces the towers
+PLAZA = (424.0, 496.0)  # u range of the plaza
+LINK = (484.0, 496.0)  # the one street that crosses the park (plaza -> south leg)
 
 
 def n_leg(u):
@@ -99,15 +103,18 @@ def w_leg(v):
     return a, a + LEG
 
 
-CORE_E = EAST0 - EAST_GREEN  # east limit of the housing core
+CORE_E = EAST_END  # east limit of the housing core
 
 
 # park: ~40 m wide down the middle of the core, opening to ~58 m at the plaza and widening at the ends
 PLAZA_V = (88.0, 146.0)
 
 
+PARK_SHIFT = 22.0  # east of the plaza the park moves north so the south cul-de-sacs get one more pair of houses
+
+
 def _mid(u):
-    return (S_LEG[1] + n_leg(u)[0]) / 2
+    return (S_LEG[1] + n_leg(u)[0]) / 2 + float(np.interp(u, [500, 530], [0, PARK_SHIFT]))
 
 
 def _half(u):
@@ -129,10 +136,10 @@ def p_n(u):
 # cul-de-sac sequences per band: V villa cluster, H house cluster, C green court, F green finger,
 # a number = gap in metres
 SEQ = {
-    "NW": ["V", "C", "V", "F", "V", "C", "H"],
-    "SW": ["H", "C", "H", "F", "H", "C"],
-    "SE": [2, "H", "C", "H", "F", "H", "C"],
-    "NE": [4, "H", "C", "H", "C", "H"],
+    "NW": ["H", "C", "H", "F", "H", "C", "H"],
+    "SW": ["H", "C", "H", "F", "H", "C", "H", "C", "H"],
+    "SE": ["H", "C", "H", "F", "H", "C", "H"],
+    "NE": [4, "H", "C", "H", "F", "H", "C", "H"],
 }
 BANDS = {}
 F = []  # (layer, geom, label)
@@ -180,6 +187,9 @@ def cluster(kind, u0, band):
         start, sgn = min(n_leg(u)[0] for u in us), -1
         stop = max(p_n(u) for u in us) + ENDGAP
     n = int(abs(stop - start) // t["f"])
+    n = min(n, -(-(TARGET[kind] - COUNT[kind]) // 2))  # stop at the programme count
+    if n <= 0:
+        return u0
     lane_end = start + sgn * n * t["f"]
     head_end = lane_end + sgn * ENDGAP
     lu0, lu1 = u0 + t["d"], u0 + t["d"] + LANE
@@ -196,6 +206,8 @@ def cluster(kind, u0, band):
         fu0 = pu1 - t["front"] if side == 0 else pu0 + t["front"]
         fu1 = fu0 - t["bd"] if side == 0 else fu0 + t["bd"]
         for i in range(n):
+            if COUNT[kind] >= TARGET[kind]:
+                break
             a = start + sgn * i * t["f"]
             b = a + sgn * t["f"]
             lo = min(a, b)
@@ -223,9 +235,12 @@ def court(u0, band, w=COURT):
     return u0 + w
 
 
-def run(seq, u0, band):
+def run(seq, u0, band, limit=1e9):
     u = u0
     for item in seq:
+        w = {"V": 2 * VILLA["d"] + LANE, "H": 2 * HOUSE["d"] + LANE, "C": COURT, "F": FINGER}.get(item, 0)
+        if u + w > limit:
+            break
         if item == "V":
             u = cluster("villa", u, band)
         elif item == "H":
@@ -242,7 +257,7 @@ def run(seq, u0, band):
 def outer_row(u0, u1, band, kind="villa"):
     """Plots fronting the loop leg, rear gardens onto the perimeter green belt."""
     t = VILLA if kind == "villa" else HOUSE
-    n = int((u1 - u0) // t["f"])
+    n = min(int((u1 - u0) // t["f"]), TARGET[kind] - COUNT[kind])
     for i in range(n):
         a, b = u0 + i * t["f"], u0 + (i + 1) * t["f"]
         s0, s1 = (a + t["side"], a + t["side"] + t["bw"]) if kind == "villa" else (a, b)
@@ -281,64 +296,62 @@ def build():
     def xw(v):  # west edge of the cross road
         return u_cross(v) - XR_W / 2
     west = SITE.intersection(Polygon([(-60, -10), (xw(-10), -10), (xw(400), 400), (-60, 400)]))
-    s_top = 45.0  # public services face the south road
-    service("MP-SERVICE-PUBLIC", rect(3, 0, 35, s_top), "مركز شرطة", 1200, rect(8, 8, 30, 26))
-    service("MP-SERVICE-PUBLIC", rect(38, 0, 76, s_top), "دفاع مدني", 1500, rect(43, 6, 71, 30))
-    service("MP-SERVICE-PUBLIC", rect(79, 0, 117, s_top), "مركز صحي", 1500, rect(84, 10, 112, 30))
-    add("MP-PARKING", west.intersection(rect(120, 0, 200, s_top)), "مواقف")
-    add("MP-PATH", west.intersection(rect(-60, s_top, 200, s_top + 4)))
-    grove = west.intersection(rect(-60, s_top + 4, 200, 108))
+    # public services on separate plots facing the south road
+    service("MP-SERVICE-PUBLIC", rect(3, 0, 23, 30), "مركز شرطة", 600, rect(6, 6, 20, 22))
+    service("MP-SERVICE-PUBLIC", rect(26, 0, 46, 30), "دفاع مدني", 600, rect(29, 6, 43, 24))
+    service("MP-SERVICE-PUBLIC", rect(49, 0, 82, 30), "مركز صحي", 1000, rect(53, 6, 78, 22))
+    xs0 = xw(104) - 2
+    add("MP-PARKING", west.intersection(rect(-60, 30, xs0 - 50, 40)), "مواقف")
+    # secondary school (intermediate + preparatory) on the cross road
+    service("MP-SERVICE-EDU", west.intersection(rect(xs0 - 48, 0, xs0, 104)), "مدرسة ثانوية", 5000,
+            rect(xs0 - 42, 60, xs0 - 6, 96))
+    service("MP-SERVICE-EDU", west.intersection(rect(-60, 42, 44, 104)), "مدرسة ابتدائية", 3000,
+            rect(4, 74, 40, 98))
+    grove = west.intersection(rect(44, 40, xs0 - 48, 104))
     service("MP-PARK", grove, "حديقة البستان")
-    # secondary schools face the cross road, yards onto the grove
-    sch0, sch1 = 112.0, 202.0
-    add("MP-PATH", west.intersection(rect(-60, 108, 200, sch0)))
-    service("MP-SERVICE-EDU", west.intersection(rect(-60, sch0, 57, sch1)), "مدرسة متوسطة", 4800,
-            rect(8, sch1 - 40, 50, sch1 - 12))
-    service("MP-SERVICE-EDU", west.intersection(rect(60, sch0, 200, sch1)), "مدرسة إعدادية", 4100,
-            rect(66, sch1 - 40, 104, sch1 - 12))
-    add("MP-PATH", west.intersection(rect(-60, sch1, 200, sch1 + 6)))
-    # towers in the north-west corner: shadow falls on the north road, no house to overlook
-    tz = west.intersection(rect(-60, sch1 + 6, 200, 400))
-    service("MP-TOWER-ZONE", tz, "منطقة البرجين", 25300)
-    t1 = rect(-4, 250, 26, 278)
-    t2 = rect(64, 238, 94, 266)
-    for i, t in enumerate((t1, t2), 1):
+    add("MP-PATH", west.intersection(rect(-60, 104, 200, 110)))
+    # three towers on a plaza over the basement car park (~360 cars), NW end: nothing to overlook
+    tz = west.intersection(rect(-60, 110, 200, 400))
+    service("MP-TOWER-ZONE", tz, "ساحة الأبراج + سرداب ~360 سيارة")
+    towers = [rect(-4, 252, 26, 280), rect(62, 238, 92, 266), rect(28, 168, 58, 196)]
+    for i, t in enumerate(towers, 1):
         add("MP-TOWER", t, f"برج {i} - 20 طابق")
         add("MP-TOWER-PODIUM", t.buffer(6, join_style=2))
-    add("MP-PARKING", west.intersection(rect(-60, sch1 + 14, xw(230) - 16, sch1 + 30)), "مواقف + سرداب")
-    add("MP-ROAD-LOCAL", west.intersection(rect(xw(230) - 16, sch1 + 8, xw(230) + 1, 236)))
-    add("MP-ROAD-LOCAL", west.intersection(rect(-60, sch1 + 8, xw(230), sch1 + 14)))
+    add("MP-WATER", rect(4, 214, 54, 220), "قناة")
+    add("MP-WATER", rect(66, 140, 90, 200).intersection(west), None)
+    add("MP-ROAD-LOCAL", west.intersection(rect(xw(130) - 16, 118, xw(130) + 1, 150)), "مدخل السرداب والإنزال")
+    add("MP-ROAD-LOCAL", west.intersection(rect(xw(130) - 34, 118, xw(130) - 14, 126)))
 
     # ================= CORE: loop, park, housing ================================================
-    tail = SITE.difference(box(-100, -10, EAST0, 400))
-    t0 = EAST0 + 2
-    s_end = t0 + 6  # the south leg runs on into the east zone
+    t0 = UT0 - 14  # second gate road
+    s_end = EB + LEG
     s_leg = rect(w_leg(S_LEG[0])[0], S_LEG[0], s_end, S_LEG[1])
-    n_end = CORE_E - 18
+    n_end = EB + LEG  # the north leg turns south into the east connector
     nw = w_leg(n_leg(140)[1])[0]
     n_leg_poly = Polygon([(nw, n_leg(nw)[0]), (n_end, n_leg(n_end)[0]), (n_end, n_leg(n_end)[1]), (nw, n_leg(nw)[1])])
     w_leg_poly = Polygon([(w_leg(S_LEG[0])[0], S_LEG[0]), (w_leg(S_LEG[0])[1], S_LEG[0]),
                           (w_leg(260)[1], 260), (w_leg(260)[0], 260)]).intersection(
         Polygon([(0, S_LEG[0]), (900, S_LEG[0]), (900, n_leg(900)[1]), (0, n_leg(0)[1])]))
-    loop = unary_union([s_leg, n_leg_poly, w_leg_poly, Point(n_end, (n_leg(n_end)[0] + n_leg(n_end)[1]) / 2).buffer(13)])
-    add("MP-ROAD-LOOP", loop, "الحلقة التجميعية 12 م")
+    e_leg = rect(EB, S_LEG[1], EB + LEG, n_leg(EB + LEG)[0])
+    add("MP-ROAD-LOOP", s_leg, "الحلقة التجميعية 12 م")
+    for leg in (n_leg_poly, w_leg_poly.difference(s_leg).difference(n_leg_poly), e_leg):
+        add("MP-ROAD-LOOP", leg)
     sc = (S_LEG[0] + S_LEG[1]) / 2
     add("MP-ROAD-CL", LineString([(w_leg(sc)[0] + 6, sc), (s_end, sc)]))
     add("MP-ROAD-CL", LineString([(nw + 6, n_leg(nw + 6)[0] + 6), (n_end, n_leg(n_end)[0] + 6)]))
     add("MP-ROAD-CL", LineString([(w_leg(sc)[0] + 6, sc), (w_leg(n_leg(140)[0])[0] + 6, n_leg(140)[0] + 6)]))
-    add("MP-GATE", LineString([(w_leg(sc)[0], S_LEG[0]), (w_leg(sc)[0], S_LEG[1])]), "بوابة ثانوية")
 
     # perimeter green belt with the jogging track
     ub0 = w_leg(0)[0]
-    belt_s = rect(ub0, 0, CORE_E, BELT)
+    belt_s = rect(ub0, 0, t0, BELT)
     belt_n = Polygon([(nw, vn(nw) - BELT), (n_end + 30, vn(n_end + 30) - BELT),
                       (n_end + 30, vn(n_end + 30)), (nw, vn(nw))])
     add("MP-GREEN-BELT", belt_s.union(belt_n), "حزام أخضر ومسار جري")
-    add("MP-JOG", LineString([(ub0, BELT / 2), (CORE_E + EAST_GREEN / 2, BELT / 2)]))
+    add("MP-JOG", LineString([(ub0, BELT / 2), (t0 - 4, BELT / 2)]))
     add("MP-JOG", LineString([(nw, vn(nw) - BELT / 2), (n_end + 30, vn(n_end + 30) - BELT / 2)]))
 
     # outer villa rows (front on the loop, gardens on the belt)
-    outer_row(w_leg(BELT)[1] + 2, CORE_E - 2, "S")
+    outer_row(w_leg(BELT)[1] + 2, t0 - 1, "S")
     g0, g1 = GATE_U - BLVD / 2, GATE_U + BLVD / 2
     nu0 = NU0  # first ~45 m behind the cross road stays a tree screen facing the towers
     outer_row(nu0, g0 - 14, "N")
@@ -367,60 +380,64 @@ def build():
     # civic heart: souq flanks the boulevard, the mosque ends the entry vista, kindergarten on the park
     def nband(u0, u1):
         return Polygon([(u0, n_leg(u0)[0]), (u1, n_leg(u1)[0]), (u1, p_n(u1)), (u0, p_n(u0))])
-    souq_w, souq_e = nband(390, g0), nband(g1, g1 + 44)
-    service("MP-SERVICE-COMM", souq_w.union(souq_e), "سوق ومقاهٍ ومطاعم", 3500)
+    souq_w, souq_e = nband(MALL_W, g0), nband(g1, g1 + MALL_E)
+    service("MP-SERVICE-COMM", souq_w.union(souq_e), "مول ومقاهٍ", 3000)
     add("MP-BLDG-SERVICE", souq_w.buffer(-5, join_style=2))
     add("MP-BLDG-SERVICE", souq_e.buffer(-5, join_style=2))
-    msq = rect(GATE_U - 18, S_LEG[1], GATE_U + 18, PLAZA_V[0])
-    service("MP-SERVICE-MOSQUE", msq, "جامع", 1500, rect(GATE_U - 13, PLAZA_V[0] - 32, GATE_U + 13, PLAZA_V[0] - 6))
+    msq = rect(GATE_U - 23.5, S_LEG[1], GATE_U + 23.5, PLAZA_V[0])
+    service("MP-SERVICE-MOSQUE", msq, "جامع", 2000, rect(GATE_U - 15, PLAZA_V[0] - 34, GATE_U + 15, PLAZA_V[0] - 6))
     add("MP-SERVICE-MOSQUE", Point(GATE_U + 10, PLAZA_V[0] - 3).buffer(2.5))
-    kg = Polygon([(354, S_LEG[1]), (GATE_U - 20, S_LEG[1]), (GATE_U - 20, p_s(GATE_U - 20)), (PLAZA[0] - 2, p_s(PLAZA[0] - 2)),
-                  (PLAZA[0] - 2.01, p_s(PLAZA[0] - 2.01)), (354, p_s(354))])
-    service("MP-SERVICE-EDU", kg, "روضة", 3600, rect(362, S_LEG[1] + 8, 400, S_LEG[1] + 30))
-    club_u1 = g1 + 44
+    kg = rect(GATE_U - 25 - 36, S_LEG[1], GATE_U - 25, PLAZA_V[0])
+    service("MP-SERVICE-EDU", kg, "روضة", 1500, rect(GATE_U - 56, S_LEG[1] + 8, GATE_U - 32, S_LEG[1] + 28))
+    club_u1 = g1 + MALL_E
 
     # ---- housing on cul-de-sacs ----
     nu = max(w_leg(v)[1] for v in (p_n(150), n_leg(150)[0])) + 3
     su = w_leg(p_s(170))[1] + 3
-    for key, u0, band in (("NW", nu, "N"), ("SW", su, "S"), ("SE", LINK[1], "S"), ("NE", club_u1, "N")):
+    for key, u0, band, lim in (("NW", nu, "N", MALL_W - 2), ("SW", su, "S", GATE_U - 63),
+                               ("SE", LINK[1] + 2, "S", t0 - 2), ("NE", club_u1, "N", n_end - 14)):
         c0 = dict(COUNT)
-        run(SEQ[key], u0, band)
+        run(SEQ[key], u0, band, lim)
         BANDS[key] = {k: COUNT[k] - c0[k] for k in COUNT}
 
-    # ================= EAST ZONE ===================================================================
-    eg = SITE.intersection(rect(CORE_E, 0, EAST0, 400)).difference(s_leg)
-    add("MP-GREEN", eg, "ممر أخضر")
-    add("MP-JOG", LineString([(CORE_E + EAST_GREEN / 2, BELT / 2), (CORE_E + EAST_GREEN / 2, vn(CORE_E) - BELT / 2)]))
-    # utilities in the low south-east corner, own service gate on the south road
-    service("MP-SERVICE-UTIL", tail.intersection(rect(t0 + 8, 0, t0 + 56, 56)), "تحلية ومعالجة مياه", 2500,
-            rect(t0 + 14, 12, t0 + 50, 42))
-    service("MP-SERVICE-UTIL", tail.intersection(rect(t0 + 58, 0, t0 + 102, 56)), "محطة كهرباء 33/11", 2500,
-            rect(t0 + 66, 12, t0 + 94, 42))
-    service("MP-SERVICE-UTIL", tail.intersection(rect(t0 + 104, 0, 900, 56)), "مجاري وخزن أمطار", 1500)
-    add("MP-GATE", LineString([(t0 + 50, 0.5), (t0 + 62, 0.5)]), "بوابة خدمة")
-    # primary school and the social club at the east end of the park
-    sch = tail.intersection(rect(0, 64, 900, 120))
-    service("MP-SERVICE-EDU", sch, "مدرسة ابتدائية", 7700, rect(t0 + 30, 88, t0 + 96, 114))
-    add("MP-ROAD-LOCAL", tail.intersection(rect(t0 - 4, 56, 900, 64)))
-    add("MP-ROAD-LOCAL", tail.intersection(rect(t0 - 4, S_LEG[0], t0 + 6, 124)))
-    club = tail.intersection(rect(t0 + 4, 120, 900, 400))
-    service("MP-SERVICE-COMM", club, "النادي الاجتماعي", 4000, rect(t0 + 50, 128, t0 + 100, 150))
-    add("MP-WATER", rect(t0 + 30, 152, t0 + 60, 164), "مسبح")
-    add("MP-PARK", tail.difference(rect(0, 0, 900, 400)), "")
+    # ================= EAST END: utilities + second gate on the south road ========================
+    service("MP-SERVICE-UTIL", rect(UT0, 0, UT0 + 30, 34), "محطة ماء", 1000, rect(UT0 + 4, 6, UT0 + 26, 24))
+    service("MP-SERVICE-UTIL", rect(UT0 + 32, 0, UT0 + 62, 34), "محطة كهرباء", 1000, rect(UT0 + 36, 6, UT0 + 58, 24))
+    service("MP-SERVICE-UTIL", rect(UT0 + 44, 34, UT0 + 62, 50), "نفايات", 300)
+    add("MP-GATE", LineString([(t0, 0.5), (t0 + 12, 0.5)]), "البوابة الثانوية والخدمة")
+    add("MP-ROAD-LOOP", rect(t0, 0, t0 + 12, S_LEG[0]))
+    # jogging loop closes round the east end of the park
+    add("MP-JOG", LineString([(t0 - 4, BELT / 2), (t0 - 4, S_LEG[0] - 2)]))
+    add("MP-JOG", LineString([(t0 + 16, S_LEG[0] - 2), (EB + LEG + 2 * VILLA["d"] + 4, S_LEG[1] + 2),
+                              (EB + LEG + 2 * VILLA["d"] + 4, vn(EB + 60) - BELT - 2), (n_end + 30, vn(n_end + 30) - BELT / 2)]))
+    # villas on both sides of the east connector
+    n_w = int((n_leg(EB)[0] - S_LEG[1]) // VILLA["f"])
+    for i in range(n_w):
+        if COUNT["villa"] < TARGET["villa"]:
+            a = S_LEG[1] + i * VILLA["f"]
+            plot("villa", rect(EB - VILLA["d"], a, EB, a + VILLA["f"]),
+                 rect(EB - VILLA["front"], a + 2, EB - VILLA["front"] - VILLA["bd"], a + 14))
+    for i in range(12):
+        a = S_LEG[1] + i * VILLA["f"]
+        p = rect(EB + LEG, a, EB + LEG + VILLA["d"], a + VILLA["f"])
+        if COUNT["villa"] >= TARGET["villa"] or a + VILLA["f"] > v_north(EB + LEG + VILLA["d"]) - BELT - 2:
+            break
+        plot("villa", p, rect(EB + LEG + VILLA["front"], a + 2, EB + LEG + VILLA["front"] + VILLA["bd"], a + 14))
 
     # ---- the park = everything left inside the core ----
-    core = Polygon([(w_leg(S_LEG[1])[1], S_LEG[1]), (CORE_E, S_LEG[1]), (CORE_E, n_leg(CORE_E)[0]),
-                    (w_leg(n_leg(140)[0])[1], n_leg(w_leg(200)[1])[0])]).intersection(SITE)
+    core = Polygon([(w_leg(S_LEG[1])[1], S_LEG[1]), (s_end, S_LEG[1]), (s_end, 0), (950, 0), (950, 400),
+                    (w_leg(n_leg(140)[0])[1], 400)]).intersection(SITE).difference(
+        Polygon([(nw, n_leg(nw)[0]), (1000, n_leg(1000)[0]), (1000, 400), (nw, 400)]))
     taken = unary_union([g for lay, g, _ in F if not isinstance(g, LineString)
                          and lay not in ("MP-BOUNDARY", "MP-WATER", "MP-PLAZA") and g.area > 0])
     park = core.difference(taken).buffer(-0.01).buffer(0.01)
     park = unary_union([g for g in getattr(park, "geoms", [park]) if g.area > 400])
     add("MP-PARK", park, "الحديقة المتصلة")
     # stream along the park, cascading at the plaza, ending in a rain pond
-    pond_c = (CORE_E - 34, (p_s(CORE_E - 34) + p_n(CORE_E - 34)) / 2)
-    add("MP-WATER", Polygon([(pond_c[0] + 24 * math.cos(a), pond_c[1] + 13 * math.sin(a) + 3 * math.sin(3 * a))
+    pond_c = (738.0, 84.0)
+    add("MP-WATER", Polygon([(pond_c[0] + 17 * math.cos(a), pond_c[1] + 13 * math.sin(a) + 3 * math.sin(3 * a))
                               for a in np.linspace(0, 2 * math.pi, 40)]), "بحيرة تجميع الأمطار")
-    us = np.arange(170, pond_c[0] - 20, 8)
+    us = np.arange(170, pond_c[0] - 22, 8)
     add("MP-WATER-CHANNEL", LineString([(u, (p_s(u) + p_n(u)) / 2 + 4 * math.sin(u / 30)) for u in us]))
     for edge in (p_s, p_n):
         sgn = 6 if edge is p_s else -6
