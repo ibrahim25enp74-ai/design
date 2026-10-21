@@ -29,7 +29,7 @@ UTIL_KEYS = ("WATER", "POWER", "WASTE")
 def table_rows():
     units = len(VILLAS) + len(HOUSES) + N_APTS
     rows = [
-        "IBRAHIM'S PROPOSAL - DEVELOPED, REV 1 - مقترح ابراهيم المطور، تعديل 1",
+        "IBRAHIM'S PROPOSAL - DEVELOPED, REV 2 - مقترح ابراهيم المطور، تعديل 2",
         "Plot 157 / District 53 Baybokht - NIC 5/2026 - UTM 38S",
         "",
         f"UNITS: {len(VILLAS)} villas 400 m2 + {len(HOUSES)} houses 240 m2 + {N_APTS} flats = {units}",
@@ -50,7 +50,7 @@ LAYERS = {
     "MP_SERVICES": (1, 25), "MP_UTILITIES": (6, 25), "MP_PARKING": (9, 13), "MP_GREEN": (3, 13),
     "MP_TEXT": (7, 18), "MP_TEXT_PLOTNO": (8, 9), "MP_TABLE": (7, 18), "MP_NORTH": (7, 25),
     "MP_HATCH_RES": (31, 0), "MP_HATCH_SERV": (1, 0), "MP_HATCH_GREEN": (3, 0), "MP_HATCH_ROAD": (252, 0),
-    "MP_HATCH_TOWER": (5, 0), "MP_LANDSCAPE": (94, 13), "MP_HATCH_LANDSCAPE": (94, 0),
+    "MP_HATCH_TOWER": (5, 0), "MP_LANDSCAPE": (94, 13), "MP_GARDEN_PATH": (41, 13), "MP_GARDEN_BEDS": (84, 13), "MP_TREES": (3, 13), "MP_HATCH_LANDSCAPE": (94, 0),
 }
 # the architect's own colours
 FILL = {
@@ -58,6 +58,7 @@ FILL = {
     "green": (19, 103, 52), "park": (120, 186, 110), "plaza": (173, 221, 247), "tower": (39, 118, 187),
     "road": (225, 225, 225), "parking": (190, 190, 190),
     "paving": (236, 226, 204), "lawn": (150, 205, 120), "water": (110, 180, 235), "play": (240, 214, 150),
+    "shrub": (70, 140, 60), "flower": (232, 150, 180), "tree": (46, 120, 50),
 }
 
 
@@ -92,8 +93,9 @@ def write_dxf(path):
         hatch(p, "MP_HATCH_RES", FILL["villa"])
     for p in HOUSES:
         hatch(p, "MP_HATCH_RES", FILL["house"])
-    for g in STRIPS + [ROUNDABOUT_ISLAND]:
-        hatch(g, "MP_HATCH_GREEN", FILL["green"])
+    for g in STRIPS:
+        hatch(g, "MP_HATCH_GREEN", FILL["lawn"])
+    hatch(ROUNDABOUT_ISLAND, "MP_HATCH_GREEN", FILL["green"])
     for g in [BIG_PARK] + GARDENS:
         hatch(g, "MP_HATCH_GREEN", FILL["park"])
     hatch(OPEN["PARK_MALL"], "MP_HATCH_ROAD", FILL["parking"])
@@ -121,7 +123,30 @@ def write_dxf(path):
     for g in (LAWN, PAVING, PLAY, CHANNEL, FOUNTAIN):
         outline(g, "MP_LANDSCAPE")
     for q in PLAZA_TREES:
-        msp.add_circle(utm(q), 2.5, dxfattribs={"layer": "MP_LANDSCAPE"})
+        msp.add_circle(utm(q), 2.5, dxfattribs={"layer": "MP_TREES"})
+    for g in [DROP_ISLAND, HEDGE] + PLANTERS:
+        hatch(g, "MP_HATCH_LANDSCAPE", FILL["shrub"])
+        outline(g, "MP_GARDEN_BEDS")
+    outline(FOUNTAIN_RING, "MP_LANDSCAPE")
+    for g in JETS + PLAY_KIT:
+        outline(g, "MP_LANDSCAPE")
+    for q in PALMS:
+        msp.add_circle(utm(q), 1.4, dxfattribs={"layer": "MP_TREES"})
+    for d in GARDEN_DESIGN:
+        for g in d["paths"] + d["nodes"]:
+            hatch(g, "MP_HATCH_LANDSCAPE", FILL["paving"])
+            outline(g, "MP_GARDEN_PATH")
+        for g in d["pools"]:
+            hatch(g, "MP_HATCH_LANDSCAPE", FILL["water"])
+            outline(g, "MP_GARDEN_PATH")
+        for g in d["beds"]:
+            hatch(g, "MP_HATCH_LANDSCAPE", FILL["shrub"])
+            outline(g, "MP_GARDEN_BEDS")
+        for g in d["flowers"]:
+            hatch(g, "MP_HATCH_LANDSCAPE", FILL["flower"])
+            outline(g, "MP_GARDEN_BEDS")
+        for x, y, r in d["trees"]:
+            msp.add_circle(utm((x, y)), r, dxfattribs={"layer": "MP_TREES"})
     for g in STRIPS + [ROUNDABOUT_ISLAND, BIG_PARK] + GARDENS:
         outline(g, "MP_GREEN")
     outline(OPEN["PARK_MALL"], "MP_PARKING")
@@ -171,11 +196,17 @@ def write_preview(png, pdf):
     ax = fig.add_axes([0.02, 0.30, 0.96, 0.64])
     rgb = {k: tuple(c / 255 for c in v) for k, v in FILL.items()}
 
+    from matplotlib.path import Path
+    from matplotlib.patches import PathPatch
+
     def f(g, key, ec="#555", lw=0.3, z=1):
         for p in polys(g):
-            ax.add_patch(MPoly(list(p.exterior.coords), closed=True, fc=rgb[key] if key else "none", ec=ec, lw=lw, zorder=z))
-            for h in p.interiors:
-                ax.add_patch(MPoly(list(h.coords), closed=True, fc="none", ec=ec, lw=lw, zorder=z))
+            verts, codes = [], []
+            for ring in [p.exterior] + list(p.interiors):
+                c = list(ring.coords)
+                verts += c
+                codes += [Path.MOVETO] + [Path.LINETO] * (len(c) - 2) + [Path.CLOSEPOLY]
+            ax.add_patch(PathPatch(Path(verts, codes), fc=rgb[key] if key else "none", ec=ec, lw=lw, zorder=z))
 
     def t(s, at, size=6, ar_s=None, w="normal", color="#111", z=10, rot=0):
         ax.text(at[0], at[1], s if ar_s is None else f"{ar_s}\n{s}", fontsize=size, ha="center", va="center",
@@ -187,18 +218,42 @@ def write_preview(png, pdf):
         f(p, "villa", ec="#8a6a40", lw=0.3)
     for p in HOUSES:
         f(p, "house", ec="#7a3a10", lw=0.3)
-    for g in STRIPS + [ROUNDABOUT_ISLAND]:
-        f(g, "green", ec="none")
+    for g in STRIPS:
+        f(g, "lawn", ec="#3a6a2a", lw=0.4)
+    f(ROUNDABOUT_ISLAND, "green", ec="none")
     for g in [BIG_PARK] + GARDENS:
         f(g, "park", ec="#3a6a2a", lw=0.4)
     f(OPEN["PARK_MALL"], "parking", ec="#555", lw=0.4)
     f(PLAZA, "plaza", ec="#468", lw=0.5)
     f(LAWN, "lawn", ec="none", z=2)
     f(PAVING, "paving", ec="#998", lw=0.3, z=2)
-    f(PLAY, "play", ec="#975", lw=0.4, z=2)
+    f(PLAY, "play", ec="#975", lw=0.4, z=3.5)
     f(CHANNEL.union(FOUNTAIN), "water", ec="#357", lw=0.4, z=2)
     for q in PLAZA_TREES:
         ax.add_patch(plt.Circle(q, 2.5, fc="#3d8a3d", ec="#1f4f1f", lw=0.3, zorder=4))
+    f(HEDGE, "shrub", ec="none", z=3)
+    f(DROP_ISLAND, "shrub", ec="#2f5a28", lw=0.3, z=3)
+    f(FOUNTAIN_RING, "paving", ec="#998", lw=0.3, z=3)
+    f(FOUNTAIN, "water", ec="#357", lw=0.4, z=3)
+    for g in PLANTERS:
+        f(g, "shrub", ec="#2f5a28", lw=0.3, z=3)
+    for g in JETS:
+        f(g, None, ec="white", lw=0.5, z=4)
+    for g in PLAY_KIT:
+        f(g, "flower", ec="#a05070", lw=0.3, z=3)
+    for x, y in PALMS:
+        ax.add_patch(plt.Circle((x, y), 1.4, fc="#6aa84f", ec="#274e13", lw=0.4, zorder=5))
+    for d in GARDEN_DESIGN:
+        for g in d["paths"] + d["nodes"]:
+            f(g, "paving", ec="#b8a888", lw=0.25, z=3)
+        for g in d["pools"]:
+            f(g, "water", ec="#357", lw=0.3, z=3)
+        for g in d["beds"]:
+            f(g, "shrub", ec="#2f5a28", lw=0.25, z=3)
+        for g in d["flowers"]:
+            f(g, "flower", ec="#a05070", lw=0.25, z=3)
+        for x, y, r in d["trees"]:
+            ax.add_patch(plt.Circle((x, y), r, fc=rgb["tree"], ec="#173f17", lw=0.3, alpha=0.9, zorder=4))
     for tw in TOWERS:
         f(tw, "tower", ec="#123", lw=0.8, z=3)
     for k, g in SERV.items():
@@ -240,7 +295,7 @@ def write_preview(png, pdf):
     ax.set_aspect("equal")
     ax.axis("off")
 
-    fig.text(0.5, 0.965, "المخطط العام - مقترح ابراهيم المطوّر (تعديل 1)   |   MASTER PLAN - IBRAHIM'S PROPOSAL, DEVELOPED - REV 1",
+    fig.text(0.5, 0.965, "المخطط العام - مقترح ابراهيم المطوّر (تعديل 2)   |   MASTER PLAN - IBRAHIM'S PROPOSAL, DEVELOPED - REV 2",
              ha="center", fontsize=26, fontweight="bold")
     fig.text(0.5, 0.945, "مجمع الشلالات السكني - القطعة 157 م53 بايبوخت - فرصة هيئة استثمار نينوى 5/2026", ha="center", fontsize=15)
     rows = table_rows()
@@ -263,18 +318,18 @@ def write_preview(png, pdf):
     key = [
         ("villa", "Villa plot 400 m²", "فلل 400 متر"), ("house", "House plot 240 m²", "دور 240 متر"),
         ("tower", f"Tower G+{FLOORS - 1}", "الأبراج"), ("paving", "Plaza paving over the basement car park", "بلاط البلازا فوق السرداب"),
-        ("lawn", "Plaza lawns", "مسطحات خضراء في البلازا"),
         ("serv", "Community services", "الخدمات"), ("util", "Utilities", "المرافق الفنية"),
-        ("green", "Green strips", "الأشرطة الخضراء"), ("park", "Parks + gardens", "الحدائق"),
+        ("lawn", "Green strips, lawns", "الأشرطة الخضراء والمسطحات"), ("park", "Parks + gardens", "الحدائق"),
+        ("shrub", "Shrub beds", "أحواض شجيرات"), ("flower", "Flower beds", "أحواض زهور"),
         ("parking", "Parking", "موقف سيارات"), ("road", "Roads", "الشوارع"),
     ]
     lg = fig.add_axes([0.50, 0.02, 0.22, 0.26])
     lg.axis("off")
     for i, (k, en, a) in enumerate(key):
-        y = 1 - i * 0.085
-        lg.add_patch(plt.Rectangle((0, y - 0.055), 0.08, 0.055, fc=rgb[k], ec="#555", transform=lg.transAxes))
+        y = 1 - i * 0.068
+        lg.add_patch(plt.Rectangle((0, y - 0.05), 0.08, 0.05, fc=rgb[k], ec="#555", transform=lg.transAxes))
         lg.text(0.11, y - 0.027, f"{en}  -  {a}", fontsize=10.5, va="center", transform=lg.transAxes)
-    yg = 1 - len(key) * 0.085 - 0.027
+    yg = 1 - len(key) * 0.068 - 0.027
     lg.plot([0, 0.08], [yg] * 2, color="#d00", lw=3, transform=lg.transAxes)
     lg.text(0.11, yg, "Gate  -  بوابة", fontsize=10.5, va="center", transform=lg.transAxes)
     nt = fig.add_axes([0.74, 0.02, 0.24, 0.26])
@@ -289,13 +344,15 @@ def write_preview(png, pdf):
         "البلازا: نزول عند المحور، ممشى بقناة ماء بين البرجين A وB،",
         "ساحة نافورة بين B وC، أرصفة حول الأبراج، مسطحات ومسار متعرج،",
         "ألعاب أطفال، وصف أشجار على الحافة.",
+        "تعديل 2: كل المساحات الخضراء حدائق مصممة: مسار متعرج، نقطة جلوس بنافورة،",
+        "أحواض زهور وشجيرات، وأشجار كل 8 م تقريبا.",
         f"موقف سرداب تحت البلازا لـ {PARK_NEED} سيارة (1.5 لكل شقة).",
         "مدخلان فقط بدون تغيير: رئيسي شمالا وخدمة جنوبا.",
         "",
         "Layers MP_*; colours follow the architect's sketch.",
     ]
     for i, n in enumerate(notes):
-        nt.text(1, 1 - i * 0.07, n, fontsize=11, ha="right", va="top", transform=nt.transAxes)
+        nt.text(1, 1 - i * 0.064, n, fontsize=10.5, ha="right", va="top", transform=nt.transAxes)
     fig.savefig(png, dpi=110)
     fig.savefig(pdf)
 

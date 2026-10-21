@@ -246,3 +246,99 @@ LANDUSE = [
     ("Parking (mall) - موقف المول", OPEN["PARK_MALL"].area),
     ("Roads - الشوارع", ROADS.area),
 ]
+
+
+# --- revision 2: every green area drawn as a designed garden ----------------------------------------
+# Winding footpath along the long side, a sitting node with a small fountain in the larger gardens,
+# flower and shrub beds off the path, trees spaced about 8 m apart away from the path.
+
+
+def _blob(c, r, rng):
+    ang = np.linspace(0, 2 * math.pi, 28, endpoint=False)
+    k = rng.uniform(0, 2 * math.pi, 3)
+    rad = r * (1 + 0.18 * np.sin(2 * ang + k[0]) + 0.12 * np.sin(3 * ang + k[1]))
+    pts = [(c[0] + rr * math.cos(a), c[1] + rr * math.sin(a) * rng.uniform(0.75, 1.0)) for a, rr in zip(ang, rad)]
+    return Polygon(pts).buffer(0)
+
+
+def design_garden(poly, seed, path_w=2.4, tree_gap=8.0, bed_r=(2.5, 4.5), bed_every=260.0, edge=3.0):
+    rng = np.random.default_rng(seed)
+    x0, y0, x1, y1 = poly.bounds
+    inner = poly.buffer(-2.0)
+    along_v = (y1 - y0) >= (x1 - x0)
+    span = (y1 - y0) if along_v else (x1 - x0)
+    width = (x1 - x0) if along_v else (y1 - y0)
+    amp = min(0.22 * width, 9.0)
+    pts = []
+    for s in np.arange(0, span + 0.1, 2.0):
+        w = amp * math.sin(2 * math.pi * s / max(36.0, span / 2.5) + rng.uniform(0, 0.01))
+        if along_v:
+            v = y0 + s
+            row = poly.intersection(box(-1e3, v - 0.3, 1e3, v + 0.3))
+            if row.is_empty:
+                continue
+            pts.append(((row.bounds[0] + row.bounds[2]) / 2 + w, v))
+        else:
+            u = x0 + s
+            col = poly.intersection(box(u - 0.3, -1e3, u + 0.3, 1e3))
+            if col.is_empty:
+                continue
+            pts.append((u, (col.bounds[1] + col.bounds[3]) / 2 + w))
+    out = {"paths": [], "nodes": [], "pools": [], "beds": [], "flowers": [], "trees": []}
+    if len(pts) >= 2 and width > 9:
+        path = LineString(pts).buffer(path_w / 2).intersection(poly)
+        out["paths"].append(path)
+        if poly.area > 1400:
+            mid = LineString(pts).interpolate(0.5, normalized=True)
+            node = mid.buffer(min(6.0, width / 4)).intersection(inner)
+            out["nodes"].append(node)
+            out["pools"].append(mid.buffer(min(2.0, width / 10)))
+    busy = unary_union(out["paths"] + out["nodes"]).buffer(2.5) if out["paths"] else Polygon()
+    free = inner.difference(busy)
+    # beds
+    n_beds = int(free.area / bed_every)
+    for i in range(n_beds):
+        for _ in range(20):
+            q = Point(rng.uniform(x0, x1), rng.uniform(y0, y1))
+            if free.buffer(-edge).contains(q):
+                b = _blob((q.x, q.y), rng.uniform(*bed_r), rng).intersection(free)
+                (out["flowers"] if i % 3 == 0 else out["beds"]).append(b)
+                free = free.difference(b.buffer(1.5))
+                break
+    # trees on a jittered grid
+    for u in np.arange(x0 + 3, x1 - 2, tree_gap):
+        for v in np.arange(y0 + 3, y1 - 2, tree_gap):
+            q = Point(u + rng.uniform(-2, 2), v + rng.uniform(-2, 2))
+            if free.buffer(-1.0).contains(q):
+                out["trees"].append((q.x, q.y, rng.uniform(1.8, 3.3)))
+    return out
+
+
+GARDEN_DESIGN = []
+for i, g in enumerate(STRIPS + [BIG_PARK] + GARDENS):
+    if g.area > 300:
+        GARDEN_DESIGN.append(design_garden(g, 100 + i))
+# the plaza lawns get beds and trees too (paths are already drawn there)
+for i, g in enumerate(polys(LAWN)):
+    d = design_garden(g, 300 + i, tree_gap=7.0, bed_r=(1.2, 2.2), bed_every=70.0, edge=1.6)
+    d["paths"], d["nodes"], d["pools"] = [], [], []
+    d["trees"] = [t for t in d["trees"] if min(math.dist(t[:2], q) for q in PLAZA_TREES) > 4.0] if PLAZA_TREES else d["trees"]
+    GARDEN_DESIGN.append(d)
+
+# plaza details: palms along the promenade, jets in the channel, a round pool with planters in the
+# fountain court, a planted island in the drop-off
+PALMS = []
+for u in np.arange(_px0 + 20.0, _px1 - 18.0, 6.0):
+    for dv in (-3.6, 3.6):
+        q = Point(u, _gap_ab + dv)
+        if PLAZA.buffer(-1.5).contains(q) and not unary_union(TOWERS).buffer(1.0).contains(q):
+            PALMS.append((q.x, q.y))
+JETS = [Point(u, _gap_ab).buffer(0.5) for u in np.arange(CHANNEL.bounds[0] + 3.0, CHANNEL.bounds[2] - 2.0, 4.0)]
+FOUNTAIN = Point(FOUNTAIN.centroid).buffer(3.6)
+FOUNTAIN_RING = Point(FOUNTAIN.centroid).buffer(5.0).difference(FOUNTAIN)
+PLANTERS = [box(FOUNTAIN.centroid.x + dx - 1.2, _gap_bc - 1.2, FOUNTAIN.centroid.x + dx + 1.2, _gap_bc + 1.2)
+            for dx in (-12.0, -8.0, 8.0, 12.0)]
+HEDGE = LAWN.difference(LAWN.buffer(-0.7, join_style="mitre")).difference(PLAY.buffer(1.0))
+DROP_ISLAND = Point((_px0 + 5.0, _gap_ab)).buffer(5.0).intersection(PLAZA)
+PLAY_KIT = [Point(PLAY.centroid.x + dx, PLAY.centroid.y + dy).buffer(1.2) for dx, dy in ((-5, 1.5), (0, -2), (5, 1.5))] \
+    if not PLAY.is_empty else []
