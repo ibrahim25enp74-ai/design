@@ -1,0 +1,37 @@
+{
+ "villas": 66,
+ "houses": 125,
+ "apartments": 152,
+ "units": 343,
+ "persons": 1906,
+ "site_m2": 199177,
+ "park_m2": 16625,
+ "green_m2_per_person": 16.0,
+ "density_pph": 96,
+ "landuse": {
+  "Villa lots (66 x 400 m2) - قطع الفلل": 26400,
+  "House lots (125 x 200 m2) - قطع الدور": 25000,
+  "Tower lots (2 towers, 152 apts) - قطعتا البرجين": 5169,
+  "Services & utilities - الخدمات والبنى التحتية": 45840,
+  "Central park (oval) - الحديقة المركزية البيضوية": 16625,
+  "Valley park & sports ground - حديقة الوادي والساحة الرياضية": 10832,
+  "Orchard green - البستان": 3000,
+  "Verges, north green belt, buffers - أرصفة وحزام أخضر": 14915,
+  "Roads (ring, boulevard, avenue, local) - الطرق": 51397
+ },
+ "services": {
+  "SOCIAL CLUB, ADMIN & RESTAURANTS - النادي الاجتماعي والإدارة والمطاعم": 6571,
+  "HEALTH CENTRE - مركز صحي": 1708,
+  "INTERMEDIATE SCHOOL - مدرسة متوسطة": 4867,
+  "POLICE - مركز شرطة": 1888,
+  "CIVIL DEFENCE - دفاع مدني": 2679,
+  "SOUQ & CAFES - السوق والمقاهي": 1456,
+  "MOSQUE - جامع": 1642,
+  "PRIMARY SCHOOL - مدرسة ابتدائية": 8684,
+  "KINDERGARTEN - روضة وحضانة": 3600,
+  "SECONDARY SCHOOL - مدرسة إعدادية": 5774,
+  "POWER SUBSTATION 33/11 kV - محطة كهرباء": 2716,
+  "DESALINATION & WATER TREATMENT - محطة تحلية ومعالجة": 2716,
+  "SEWAGE & WASTE - مجاري ونفايات": 1538
+ }
+}
