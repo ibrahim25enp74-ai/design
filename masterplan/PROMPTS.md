@@ -1,62 +1,101 @@
-# برومتات توليد صور المقترحات الأربعة - مجمع الشلالات السكني
+# برومتات لوحات المقترحات الأربعة - مجمع الشلالات السكني
 
-كل برومت كامل بنفسه ويُستخدم منفرداً. النسبة المقترحة 3:1 لأن القطعة طويلة.
-البرومت السلبي (Negative) في آخر الملف، ويُضاف للأدوات التي تقبله.
+صيغة اللوحة: لوحة عمودية 2:3 بنفس مستوى اللوحة المرجعية. الجهة اليسرى فيها المخطط الجوي الواقعي، واليمنى لوحة نصوص عربية.
+اتجاه القطعة في اللوحة مطابق للمسح:
+- الطرف الغربي العريض (300 م) في الأعلى، والشرقي الضيق (150 م) في الأسفل.
+- الشارع الشمالي العام (الأطول، 912 م) على يمين القطعة، والجنوبي على يسارها.
+- لذلك يشير سهم الشمال إلى اليمين مائلاً نحو 30° للأعلى.
 
----
+**طريقة الاستخدام:** ارفع مع كل برومت صورتين مرجعيتين: مخطط القطعة بالحدود الحمراء، واللوحة المرجعية للأسلوب. ثم أضف البرومت السلبي من آخر الملف.
 
-## المقترح (أ) - المحور (The Spine)
-
-```
-Top-down orthographic architectural master plan rendering, urban design competition board quality, 1:2000 site plan, soft realistic drop shadows, white flat roofs, lush textured lawns, round tree canopies with shadows, light beige paved plazas and walkways, grey asphalt roads with thin white lane markings, crisp thin plot boundaries, muted warm palette, clean and highly legible.
-
-SITE: an elongated trapezoid about 900 m long, 300 m wide at the left (west) end narrowing to 150 m at the right (east) end. The top edge is a straight main public road; the bottom edge is a second public road that rises slightly toward the right. A narrow public road crosses the site diagonally about 15% from the left end. A dry riverbed (wadi) with a thin stream and riparian trees crosses the site top to bottom about 80% from the left. A grove of mature trees covers the far left end. Outside the site: muted farmland and low plots.
-
-PROGRAM: gated residential community for judges: about 80 detached two-storey villas on 16x25 m plots with private gardens, about 140 terraced townhouses on 10x20 m plots in long rows, two 20-storey slab towers, mosque with a minaret, schools with courtyards and sports courts, market street, clinic, social club with pool.
-
-CONCEPT "THE SPINE": one straight 24 m tree-lined boulevard with a planted median runs the whole length of the site parallel to the top road, about 40% down from the top edge, from a roundabout near the left end to a park at the wadi, then crosses the wadi on a bridge into a small villa cluster on the far right. MAIN GATE on the top road about 22% from the left: gatehouse, barrier arms, visitor parking, short tree-lined entry avenue down to the roundabout at the head of the boulevard. Perpendicular collector streets every 150 m form a clear ladder grid with local streets parallel to the boulevard; every street connects, no dead ends. Upper band: rows parallel to the top road: villas along the edge, local street, villas, back-to-back townhouses facing a frontage lane on the boulevard. Lower band: wider on the left with extra townhouse rows, narrowing to the right. At the midpoint a civic "high street": shops with arcades, mosque with minaret and a small plaza, clinic on the upper side facing the boulevard; primary school, intermediate school and kindergarten with courtyards and playing fields on the lower side. Left of the diagonal road: two 20-storey towers standing among the mature grove (upper part) and public buildings along the public roads: police, civil defence, high school, power substation, social club with pool (lower part). Right end: park with a cascading fountain where the boulevard ends, footpaths along the wadi, a fenced water treatment plant screened by trees at the bottom right with a service gate on the bottom road. Continuous perimeter tree belt with a jogging path inside the fence, pocket parks at every cross street.
-```
+**الأرقام في الجداول:** أرقام تصميمية أولية تُراجع بعد رسم المخطط على ملف الـ DXF.
 
 ---
 
-## المقترح (ب) - القلب الأخضر (The Green Heart)
+## المقترح (أ) - المحور
 
 ```
-Top-down orthographic architectural master plan rendering, urban design competition board quality, 1:2000 site plan, soft realistic drop shadows, white flat roofs, lush textured lawns, round tree canopies with shadows, light beige paved plazas and walkways, grey asphalt roads with thin white lane markings, crisp thin plot boundaries, muted warm palette, clean and highly legible.
+A vertical 2:3 architectural competition presentation board in Arabic, same visual level as the attached reference board: photorealistic top-down aerial master plan rendering set into a real satellite context of semi-arid Nineveh farmland, scattered low buildings and highway junctions; soft natural shadows; white flat-roof villas and townhouses; lush lawns and dense round tree canopies; light beige paving; turquoise water; grey asphalt roads with white markings; red site boundary line. Left 65% of the board is the plan, right 35% is a clean off-white text panel with dark green Arabic headings.
 
-SITE: an elongated trapezoid about 900 m long, 300 m wide at the left (west) end narrowing to 150 m at the right (east) end. The top edge is a straight main public road; the bottom edge is a second public road that rises slightly toward the right. A dry riverbed (wadi) with a thin stream and riparian trees crosses the site top to bottom about 80% from the left. A grove of mature trees covers the far left end. Outside the site: muted farmland and low plots.
+SITE (exact shape, use the attached boundary): a long tapered plot, about 900 m long, 300 m wide at the TOP (west) end narrowing to 150 m at the BOTTOM (east) end. A straight main public road runs along the RIGHT long side (north road) and a second public road along the LEFT long side (south road). A narrow public road crosses the plot diagonally near the top, about 15-24% down. A dry wadi with a thin stream and riparian trees crosses the plot near the bottom, about 78-85% down. A grove of mature trees at the very top.
 
-PROGRAM: gated residential community for judges: about 95 detached two-storey villas on 16x25 m plots with private gardens, about 180 terraced townhouses on 10x20 m plots in rows, two 20-storey slab towers, mosque with a minaret, schools with courtyards and sports courts, market, clinic, social club with pool.
+CONCEPT A "THE SPINE": one straight 24 m boulevard with a tree-planted median runs vertically down the length of the plot, about 40% in from the right side, from a roundabout just below the diagonal road to a park at the wadi, then crosses the wadi on a bridge to a small villa cluster at the very bottom. MAIN GATE on the right-side road about 22% down: gatehouse, barrier arms, visitor parking, a short tree-lined avenue to the roundabout. Cross streets every 150 m perpendicular to the boulevard form a clear ladder grid, with local streets parallel to it; every street connected, no dead ends. Between the boulevard and the right road: villa rows along the edge, a local street, villas, back-to-back townhouses facing a frontage lane on the boulevard. Between the boulevard and the left road: wider near the top with extra townhouse rows, narrowing toward the bottom. At mid-length a civic high street: shops with shaded arcades, a mosque with a minaret and a small plaza and a clinic on the right side of the boulevard; primary school, intermediate school and kindergarten with courtyards and sports courts on the left side. Above the diagonal road at the top: two 20-storey white residential towers standing among the mature grove, and police, civil defence, high school, power substation and a social club with pool along the public roads. Near the bottom: a park with a cascading fountain at the end of the boulevard, footpaths along the wadi, a water treatment plant screened by trees on the left with a service gate. Perimeter tree belt with a jogging path inside the fence.
 
-CONCEPT "THE GREEN HEART": a large oval central park, about 160 x 110 m, sits exactly at the centre of the site, with a lake, terraced cascading waterfalls, open lawns, shade trees and a circular promenade, wrapped by a 16 m tree-lined ring road. MAIN GATE on the top road at the centre: gatehouse, barrier arms, visitor parking; a ceremonial straight tree-lined avenue with a planted median runs from the gate down to the park. The two 20-storey towers frame the gate, one on each side of the avenue, set on the top edge facing the park. Around the ring road: a mosque with a minaret and a paved forecourt on the main axis at the bottom side of the park, the primary and intermediate schools with playing fields to the left and right of the park, the market, clinic and social club with pool on the ring. Two residential wings, left and right of the heart: radial streets leave the ring road and feed looped local streets; villas and townhouse rows parallel to the top road; a kindergarten with a playground in each wing. Far left end: villas set among the existing grove of mature trees. Right end beyond the wadi: a villa cluster around a green, reached by a bridge. Tree-lined green corridors with walking paths link both wings to the central park; a wadi park with footbridges; a service gate on the bottom road at the right; a perimeter tree belt with a jogging path.
-```
+ARABIC CALLOUT LABELS (white rounded boxes with thin leader lines): "البوابة الرئيسية (من الشارع الشمالي)", "البرجان بين أشجار البستان (152 شقة)", "المحور: بوليفارد 24 م", "الشارع الخدمي: سوق وجامع ومركز صحي", "المدارس", "حديقة الشلالات", "حديقة الوادي", "بوابة الخدمة", "السكن الأفقي (فلل منفصلة)", "السكن الأفقي (دور متصلة)".
 
----
-
-## المقترح (ج) - الوادي الأخضر (The Green Wadi)
-
-```
-Top-down orthographic architectural master plan rendering, landscape-led urban design competition board, 1:2000 site plan, soft realistic drop shadows, white flat roofs, very lush textured lawns and dense round tree canopies with shadows, meandering light beige promenades, water channels and pools in blue, grey asphalt roads with thin white markings, crisp thin plot boundaries, muted warm palette, clean and highly legible.
-
-SITE: an elongated trapezoid about 900 m long, 300 m wide at the left (west) end narrowing to 150 m at the right (east) end. The top edge is a straight main public road; the bottom edge is a second public road that rises slightly toward the right. A narrow public road crosses the site diagonally about 15% from the left end. A dry riverbed (wadi) with a thin stream and riparian trees crosses the site top to bottom about 80% from the left. A grove of mature trees covers the far left end. Outside the site: muted farmland and low plots.
-
-PROGRAM: gated residential community for judges: about 80 detached two-storey villas on 16x25 m plots with private gardens, about 140 terraced townhouses on 10x20 m plots in rows, two 20-storey slab towers, mosque with a minaret, schools with courtyards, market, clinic, social club with pool.
-
-CONCEPT "THE GREEN WADI": a continuous linear valley park runs the full length through the middle of the site, 40 to 90 m wide, from the tree grove on the left to the wadi on the right, with a meandering shaded promenade, rows of shade trees, playgrounds, narrow water channels and a stepped cascade. Cars stay at the edges: a 16 m tree-lined collector loop road runs near the top edge and near the bottom edge, joined by two cross streets at the ends of the valley, with local streets inside the residential bands; the park is crossed by a road only once, at the centre. MAIN GATE on the top road at the centre: gatehouse, barrier arms, visitor parking, a short tree-lined avenue to a central plaza inside the valley with terraced waterfalls; a mosque with a minaret stands on the far side of the plaza and closes the view; market, clinic and a social club with pool on the water around the plaza; primary and intermediate schools face the park from the lower band; a kindergarten at each end of the valley. Housing bands above and below the valley in rows parallel to the edges; the inner row is villas whose rear gardens open straight onto the park. Green fingers, 8 m pedestrian lanes lined with trees and planted rain swales, cross the housing bands every 130 m from the perimeter jogging path to the valley. Beyond the diagonal public road on the far left: the two 20-storey towers among the mature grove in the top-left corner, plus police, civil defence, high school and power substation on the public roads. Right end: wadi park with riparian trees and footbridges, a villa cluster across the wadi reached by a bridge, a water treatment plant screened by trees at the bottom right with a service gate.
+RIGHT PANEL TEXT (Arabic, exact):
+Title: "مجمع الشلالات السكني" — subtitle "محافظة نينوى" — heading "المخطط العام - المقترح (أ): المحور".
+Paragraph: "مجمع سكني فاخر للقضاة يضم 372 وحدة سكنية لنحو 2,080 ساكناً على مساحة 199,175 م². محور واحد يحمل الحركة والخدمات والبنى التحتية، والبرجان والخدمات العامة خارج النطاق السكني."
+Table "توزيع استعمالات الأرض" with colour swatches, columns الاستعمال / المساحة (م²) / النسبة:
+السكن الأفقي 84,000 42.2% | منطقة البرجين 22,500 11.3% | الخدمات العامة والبنى التحتية 41,400 20.8% | الحدائق العامة والترفيه 18,075 9.1% | الشوارع الرئيسية والمواقف 33,200 16.7% | المجموع 199,175 100%.
+Section "مكونات المشروع الرئيسية" with simple line icons: السكن الأفقي: 81 فيلا منفصلة (400 م²)، 139 داراً متصلة (200 م²) — منطقة البرجين: 152 شقة، أرضي + 19 طابقاً — الخدمات العامة: مدرسة ابتدائية ومتوسطة وإعدادية، روضتان، جامع، مركز صحي، سوق، شرطة، دفاع مدني، نادٍ اجتماعي، محطة ماء وكهرباء — الحدائق: حديقة الشلالات، حديقة الوادي، حديقة البستان — الطرق: بوليفارد 24 م، تجميعية 16 م، محلية 12 م.
+Bottom right: scale bar 0 50 100 200 300 400 م, and a north arrow labelled "الشمال" pointing to the RIGHT and tilted about 30 degrees upward.
 ```
 
 ---
 
-## المقترح (د) - التجمعات الآمنة (Secure Clusters)
+## المقترح (ب) - القلب الأخضر
 
 ```
-Top-down orthographic architectural master plan rendering, urban design competition board quality, 1:2000 site plan, soft realistic drop shadows, white flat roofs, lush textured lawns, round tree canopies with shadows, light beige paved courtyards and lanes, grey asphalt roads with thin white markings, crisp thin plot boundaries, muted warm palette, clean and highly legible.
+A vertical 2:3 architectural competition presentation board in Arabic, same visual level as the attached reference board: photorealistic top-down aerial master plan rendering set into a real satellite context of semi-arid Nineveh farmland, scattered low buildings and highway junctions; soft natural shadows; white flat-roof villas and townhouses; lush lawns and dense round tree canopies; light beige paving; turquoise water; grey asphalt roads with white markings; red site boundary line. Left 65% of the board is the plan, right 35% is a clean off-white text panel with dark green Arabic headings.
 
-SITE: an elongated trapezoid about 900 m long, 300 m wide at the left (west) end narrowing to 150 m at the right (east) end. The top edge is a straight main public road; the bottom edge is a second public road that rises slightly toward the right. A narrow public road crosses the site diagonally about 15% from the left end. A dry riverbed (wadi) with a thin stream and riparian trees crosses the site top to bottom about 80% from the left. A grove of mature trees covers the far left end. Outside the site: muted farmland and low plots.
+SITE (exact shape, use the attached boundary): a long tapered plot, about 900 m long, 300 m wide at the TOP (west) end narrowing to 150 m at the BOTTOM (east) end. A straight main public road runs along the RIGHT long side (north road) and a second public road along the LEFT long side (south road). A dry wadi with a thin stream and riparian trees crosses the plot near the bottom, about 78-85% down. A grove of mature trees at the very top.
 
-PROGRAM: gated residential community for judges: about 100 detached two-storey villas on 16x25 m plots with private gardens, about 140 terraced townhouses on 10x20 m plots, two 20-storey slab towers, Friday mosque with a minaret, schools, market, clinic, social club with pool.
+CONCEPT B "THE GREEN HEART": a large oval central park, about 160 x 110 m, sits exactly in the middle of the plot: a lake with terraced cascading waterfalls, open lawns, shade trees, an amphitheatre and a circular promenade, wrapped by a 16 m tree-lined ring road. MAIN GATE on the right-side road at mid-length: gatehouse, barrier arms, visitor parking; a straight ceremonial tree-lined avenue with a planted median runs from the gate across to the park. Two 20-storey white residential towers frame the gate, one on each side of the avenue, set along the right edge and facing the park. Around the ring road: a mosque with a minaret and a paved forecourt on the main axis at the far (left) side of the park; primary and intermediate schools with playing fields above and below the park; market, clinic and social club with pool on the ring. Two residential wings, above and below the heart: radial streets leave the ring road and feed looped local streets; villa and townhouse rows parallel to the long sides; a kindergarten with a playground in each wing. Top end: villas set among the existing grove of mature trees. Bottom end beyond the wadi: a villa cluster around a green, reached by a bridge. Tree-lined green corridors with walking paths link both wings to the central park; wadi park with footbridges; service gate on the left road near the bottom; perimeter tree belt with a jogging path.
 
-CONCEPT "SECURE CLUSTERS": privacy in three layers. MAIN GATE on the top road about one third from the left: gatehouse, security forecourt, barrier arms, visitor parking. One 16 m tree-lined distributor road runs along the middle of the site. Off it hang 7 gated clusters of 30 to 45 homes each, alternating above and below the distributor; each cluster has a small gatehouse at its own entrance and a few visitor parking bays, a single cul-de-sac shared-surface lane no longer than 120 m ending in a turning circle, and a shared central courtyard garden with a playground and shade trees; houses face the courtyard. Clusters are separated by green buffers with walking paths and each has its own tree species and paving pattern. Civic centre at the midpoint of the distributor, inside the main gate but outside the cluster gates: market, two kindergartens, primary and intermediate schools with playing fields, clinic, social club with pool, around a paved plaza. Far left, beyond the diagonal public road: a public front open to the city with police, civil defence, high school, a Friday mosque with a minaret, a power substation, and a public park in the mature grove. Far right, beyond the wadi: the two 20-storey towers on their own island, with their own gate and parking from the bottom road, separated from the villas by the wadi park with riparian trees and footbridges. Perimeter tree belt with a jogging path inside the fence; service gate on the bottom road.
+ARABIC CALLOUT LABELS (white rounded boxes with thin leader lines): "البوابة الرئيسية بين البرجين", "البرجان (152 شقة)", "القلب الأخضر: حديقة الشلالات المركزية", "الجامع", "المدارس", "الجناح الغربي: فلل البستان", "الجناح الشرقي", "حديقة الوادي", "بوابة الخدمة", "السكن الأفقي (فلل منفصلة)", "السكن الأفقي (دور متصلة)".
+
+RIGHT PANEL TEXT (Arabic, exact):
+Title: "مجمع الشلالات السكني" — subtitle "محافظة نينوى" — heading "المخطط العام - المقترح (ب): القلب الأخضر".
+Paragraph: "مجمع سكني فاخر للقضاة يضم 426 وحدة سكنية لنحو 2,400 ساكن على مساحة 199,175 م². حديقة مركزية في قلب المجمع، وكل بيت على بعد متقارب منها ومن الخدمات المحيطة بها."
+Table "توزيع استعمالات الأرض" with colour swatches, columns الاستعمال / المساحة (م²) / النسبة:
+السكن الأفقي 91,000 45.7% | منطقة البرجين 24,000 12.0% | الخدمات العامة والبنى التحتية 40,500 20.3% | الحدائق العامة والترفيه 24,675 12.4% | الشوارع الرئيسية والمواقف 19,000 9.5% | المجموع 199,175 100%.
+Section "مكونات المشروع الرئيسية" with simple line icons: السكن الأفقي: 95 فيلا منفصلة (400 م²)، 179 داراً متصلة (200 م²) — منطقة البرجين: 152 شقة، أرضي + 19 طابقاً — الخدمات العامة: مدرسة ابتدائية ومتوسطة وإعدادية، روضتان، جامع، مركز صحي، سوق، شرطة، دفاع مدني، نادٍ اجتماعي، محطة ماء وكهرباء — الحدائق: حديقة الشلالات المركزية، حديقة الوادي، ممرات خضراء — الطرق: شارع دخول 24 م، طريق حلقي 16 م، محلية 12 م.
+Bottom right: scale bar 0 50 100 200 300 400 م, and a north arrow labelled "الشمال" pointing to the RIGHT and tilted about 30 degrees upward.
+```
+
+---
+
+## المقترح (ج) - الوادي الأخضر
+
+```
+A vertical 2:3 architectural competition presentation board in Arabic, same visual level as the attached reference board: photorealistic top-down aerial master plan rendering set into a real satellite context of semi-arid Nineveh farmland, scattered low buildings and highway junctions; soft natural shadows; white flat-roof villas and townhouses; very lush lawns and dense round tree canopies; meandering light beige promenades; turquoise water channels and pools; grey asphalt roads with white markings; red site boundary line. Left 65% of the board is the plan, right 35% is a clean off-white text panel with dark green Arabic headings.
+
+SITE (exact shape, use the attached boundary): a long tapered plot, about 900 m long, 300 m wide at the TOP (west) end narrowing to 150 m at the BOTTOM (east) end. A straight main public road runs along the RIGHT long side (north road) and a second public road along the LEFT long side (south road). A narrow public road crosses the plot diagonally near the top, about 15-24% down. A dry wadi with a thin stream and riparian trees crosses the plot near the bottom, about 78-85% down. A grove of mature trees at the very top.
+
+CONCEPT C "THE GREEN WADI": a continuous linear valley park runs vertically down the middle of the plot, 40 to 90 m wide, from the tree grove at the top to the wadi near the bottom, with a meandering shaded promenade, rows of shade trees, playgrounds, narrow water channels and stepped cascades. Cars stay at the edges: a 16 m tree-lined collector loop road runs near the right edge and near the left edge, joined by two cross streets at both ends of the valley, with local streets inside the housing bands; the park is crossed by a road only once, at mid-length. MAIN GATE on the right-side road at mid-length: gatehouse, barrier arms, visitor parking, a short tree-lined avenue to a central plaza inside the valley with terraced waterfalls; a mosque with a minaret stands on the far side of the plaza and closes the view; market, clinic and a social club with pool on the water around the plaza; primary and intermediate schools face the park from the left band; a kindergarten at each end of the valley. Housing bands on both sides of the valley in rows parallel to the long sides; the inner row is villas whose rear gardens open straight onto the park. Green fingers, 8 m pedestrian lanes with trees and planted rain swales, cross the housing bands every 130 m from the perimeter jogging path to the valley. Above the diagonal public road at the top: the two 20-storey white residential towers among the mature grove in the top-right corner, plus police, civil defence, high school and power substation on the public roads. Bottom: wadi park with riparian trees and footbridges, a villa cluster beyond the wadi reached by a bridge, a water treatment plant screened by trees on the left with a service gate.
+
+ARABIC CALLOUT LABELS (white rounded boxes with thin leader lines): "البوابة الرئيسية (من الشارع الشمالي)", "الساحة المركزية والشلالات", "حديقة الوادي الأخضر (متصلة بطول المجمع)", "الأصابع الخضراء", "البرجان في البستان (152 شقة)", "حلقة السيارات على الأطراف", "المدارس على الحديقة", "حديقة الوادي", "بوابة الخدمة", "السكن الأفقي (فلل منفصلة)", "السكن الأفقي (دور متصلة)".
+
+RIGHT PANEL TEXT (Arabic, exact):
+Title: "مجمع الشلالات السكني" — subtitle "محافظة نينوى" — heading "المخطط العام - المقترح (ج): الوادي الأخضر".
+Paragraph: "مجمع سكني فاخر للقضاة يضم 372 وحدة سكنية لنحو 2,080 ساكناً على مساحة 199,175 م². حديقة متصلة بطول المجمع من البستان إلى الوادي، والسيارات على الأطراف، وكل بيت على الخضرة."
+Table "توزيع استعمالات الأرض" with colour swatches, columns الاستعمال / المساحة (م²) / النسبة:
+السكن الأفقي 80,000 40.2% | منطقة البرجين 22,000 11.0% | الخدمات العامة والبنى التحتية 39,000 19.6% | الحدائق العامة والترفيه 34,175 17.2% | الشوارع الرئيسية والمواقف 24,000 12.0% | المجموع 199,175 100%.
+Section "مكونات المشروع الرئيسية" with simple line icons: السكن الأفقي: 80 فيلا منفصلة (400 م²)، 140 داراً متصلة (200 م²) — منطقة البرجين: 152 شقة، أرضي + 19 طابقاً — الخدمات العامة: مدرسة ابتدائية ومتوسطة وإعدادية، روضتان، جامع، مركز صحي، سوق، شرطة، دفاع مدني، نادٍ اجتماعي، محطة ماء وكهرباء — الحدائق: حديقة الوادي الأخضر، حديقة الوادي، الأصابع الخضراء، حديقة البستان — الطرق: شارع دخول 24 م، حلقة تجميعية 16 م، محلية 12 م.
+Bottom right: scale bar 0 50 100 200 300 400 م, and a north arrow labelled "الشمال" pointing to the RIGHT and tilted about 30 degrees upward.
+```
+
+---
+
+## المقترح (د) - التجمعات الآمنة
+
+```
+A vertical 2:3 architectural competition presentation board in Arabic, same visual level as the attached reference board: photorealistic top-down aerial master plan rendering set into a real satellite context of semi-arid Nineveh farmland, scattered low buildings and highway junctions; soft natural shadows; white flat-roof villas and townhouses; lush lawns and dense round tree canopies; light beige paved courtyards and lanes; turquoise water; grey asphalt roads with white markings; red site boundary line. Left 65% of the board is the plan, right 35% is a clean off-white text panel with dark green Arabic headings.
+
+SITE (exact shape, use the attached boundary): a long tapered plot, about 900 m long, 300 m wide at the TOP (west) end narrowing to 150 m at the BOTTOM (east) end. A straight main public road runs along the RIGHT long side (north road) and a second public road along the LEFT long side (south road). A narrow public road crosses the plot diagonally near the top, about 15-24% down. A dry wadi with a thin stream and riparian trees crosses the plot near the bottom, about 78-85% down. A grove of mature trees at the very top.
+
+CONCEPT D "SECURE CLUSTERS": privacy in three layers. MAIN GATE on the right-side road about one third down: gatehouse, security forecourt, barrier arms, visitor parking. One 16 m tree-lined distributor road runs vertically down the middle of the plot. Off it hang 7 gated residential clusters of 30 to 45 homes each, alternating left and right of the distributor; each cluster has a small gatehouse at its own entrance with a few visitor parking bays, one cul-de-sac shared-surface lane no longer than 120 m ending in a turning circle, and a shared central courtyard garden with a playground and shade trees that the houses face. Clusters are separated by green buffers with walking paths, and each has its own tree species and paving colour. Civic centre at mid-length on the distributor, inside the main gate but outside the cluster gates: market, two kindergartens, primary and intermediate schools with playing fields, clinic and a social club with pool around a paved plaza. Above the diagonal public road at the top: a public front open to the city with police, civil defence, high school, a Friday mosque with a minaret, a power substation and a public park in the mature grove. At the bottom, beyond the wadi: the two 20-storey white residential towers on their own island with their own gate and parking from the left road, separated from the villas by the wadi park with riparian trees and footbridges. Perimeter tree belt with a jogging path inside the fence; service gate on the left road.
+
+ARABIC CALLOUT LABELS (white rounded boxes with thin leader lines): "البوابة الرئيسية وساحة التفتيش", "تجمع سكني مسيّج (30-45 وحدة)", "بوابة التجمع", "الفناء المشترك", "المركز الخدمي", "الواجهة العامة: شرطة، دفاع مدني، إعدادية، جامع جمعة", "جزيرة البرجين ومدخلها المستقل (152 شقة)", "حديقة الوادي", "السكن الأفقي (فلل منفصلة)", "السكن الأفقي (دور متصلة)".
+
+RIGHT PANEL TEXT (Arabic, exact):
+Title: "مجمع الشلالات السكني" — subtitle "محافظة نينوى" — heading "المخطط العام - المقترح (د): التجمعات الآمنة".
+Paragraph: "مجمع سكني فاخر للقضاة يضم 392 وحدة سكنية لنحو 2,200 ساكن على مساحة 199,175 م². تجمعات سكنية مسيّجة حول أفنية خضراء، بثلاث طبقات أمن، والبرجان على جزيرة مستقلة."
+Table "توزيع استعمالات الأرض" with colour swatches, columns الاستعمال / المساحة (م²) / النسبة:
+السكن الأفقي 88,000 44.2% | منطقة البرجين 23,500 11.8% | الخدمات العامة والبنى التحتية 41,400 20.8% | الحدائق العامة والترفيه 20,275 10.2% | الشوارع الرئيسية والمواقف 26,000 13.1% | المجموع 199,175 100%.
+Section "مكونات المشروع الرئيسية" with simple line icons: السكن الأفقي: 100 فيلا منفصلة (400 م²)، 140 داراً متصلة (200 م²) في 7 تجمعات — منطقة البرجين: 152 شقة، أرضي + 19 طابقاً — الخدمات العامة: مدرسة ابتدائية ومتوسطة وإعدادية، روضتان، جامع جمعة، مركز صحي، سوق، شرطة، دفاع مدني، نادٍ اجتماعي، محطة ماء وكهرباء — الحدائق: أفنية التجمعات، حديقة البستان، حديقة الوادي — الطرق: شارع موزّع 16 م، أزقة التجمعات 8-10 م.
+Bottom right: scale bar 0 50 100 200 300 400 م, and a north arrow labelled "الشمال" pointing to the RIGHT and tilted about 30 degrees upward.
 ```
 
 ---
@@ -64,10 +103,11 @@ CONCEPT "SECURE CLUSTERS": privacy in three layers. MAIN GATE on the top road ab
 ## البرومت السلبي (Negative prompt)
 
 ```
-perspective view, oblique 3D, isometric, fisheye, blurry, low resolution, gibberish text, random letters, watermark, cluttered cars, people, random curved streets, dead-end streets without turning circles, disconnected paths, overlapping buildings, buildings inside roads, empty grey site, cartoon style, neon colours, heavy outlines, snow, ocean, skyscraper cluster, dense city grid
+perspective view, oblique 3D, isometric, fisheye, blurry, low resolution, misspelled Arabic, broken Arabic letters, Latin text on the plan, watermark, cluttered cars, people, random curved streets, dead-end streets without turning circles, disconnected footpaths, overlapping buildings, buildings on roads, wrong plot shape, rectangular plot, plot wider at the bottom, north arrow pointing up, cartoon style, neon colours, heavy outlines, snow, ocean, dense skyscraper cluster
 ```
 
 ## إعدادات مقترحة
-- **Midjourney:** أضف في آخر البرومت `--ar 3:1 --style raw --v 7`.
-- **أدوات أخرى:** نسبة 3:1، أعلى دقة متاحة، والبرومت السلبي في حقله الخاص.
-- **لصورة أدق:** ارفع مخطط القطعة (الحدود الحمراء) كصورة مرجعية مع البرومت، فتلتزم الأداة بشكل القطعة.
+- **النسبة:** 2:3 عمودية، بأعلى دقة متاحة.
+- **Midjourney:** أضف `--ar 2:3 --style raw --v 7`، مع الصورتين المرجعيتين.
+- **الأدوات التي تكتب العربية بدقة:** مثل GPT-Image وNano Banana Pro، وهي الأفضل لهذه اللوحة لأن النصوص العربية كثيرة.
+- **إذا خرجت النصوص مشوهة:** ولّد المخطط وحده دون اللوحة الجانبية، ثم أضف النصوص في برنامج تصميم.
