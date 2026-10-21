@@ -79,6 +79,8 @@ msp = doc.modelspace()
 
 LAYERS = {
     "BOUNDARY": (1, 50),
+    "BOUNDARY_COORDS": (6, 25),
+    "CORNERS_NET": (1, 18),
     "CORNERS": (7, 25),
     "DIMS": (3, 18),
     "TEXT": (7, 18),
@@ -96,8 +98,36 @@ pts = list(P.values())
 names = list(P.keys())
 centroid = tuple(np.mean(pts, axis=0))
 
+
+def net_plot(d):
+    """Both long sides moved `d` m into the plot (road reserve), short sides kept on their lines."""
+    w = offset_line(pts[3], pts[0], -d)  # P4->P1: left is outside, so negative = inward
+    e = offset_line(pts[1], pts[2], -d)  # P2->P3: same
+    n_edge, s_edge = (pts[0], pts[1]), (pts[2], pts[3])
+    return [intersect(*w, *n_edge), intersect(*e, *n_edge), intersect(*e, *s_edge), intersect(*w, *s_edge)]
+
+
+# the announced area is smaller than the coordinate polygon: take the difference as an equal
+# road reserve along the two long sides, solved so the net plot equals the announcement exactly
+lo, hi = 0.0, 20.0
+for _ in range(80):
+    RESERVE = (lo + hi) / 2
+    lo, hi = (RESERVE, hi) if area(net_plot(RESERVE)) > ANNOUNCED_M2 else (lo, RESERVE)
+net = net_plot(RESERVE)
+Q = {f"Q{i + 1}": q for i, q in enumerate(net)}
+
 # --- boundary --------------------------------------------------------------------------------------
-msp.add_lwpolyline(pts, close=True, dxfattribs={"layer": "BOUNDARY", "const_width": 0.6})
+msp.add_lwpolyline(net, close=True, dxfattribs={"layer": "BOUNDARY", "const_width": 0.6})
+msp.add_lwpolyline(pts, close=True, dxfattribs={"layer": "BOUNDARY_COORDS", "linetype": "DASHED"})
+for n, q in Q.items():
+    msp.add_circle(q, 1.5, dxfattribs={"layer": "CORNERS_NET"})
+    tq = np.add(q, unit(q, centroid) * 16)
+    msp.add_text(n, height=5, dxfattribs={"layer": "CORNERS_NET", "style": "AR"}).set_placement(
+        (tq[0], tq[1] + 4), align=TextEntityAlignment.MIDDLE_CENTER
+    )
+    msp.add_text(f"E {q[0]:.2f}  N {q[1]:.2f}", height=3, dxfattribs={"layer": "CORNERS_NET", "style": "AR"}).set_placement(
+        (tq[0], tq[1] - 3), align=TextEntityAlignment.MIDDLE_CENTER
+    )
 
 # --- corners ---------------------------------------------------------------------------------------
 for n, p in P.items():
@@ -127,8 +157,11 @@ dim.dxf.dimpost = "<> m"
 edges = []
 for i in range(4):
     a, b = pts[i], pts[(i + 1) % 4]
-    L = math.dist(a, b)
-    edges.append((f"{names[i]}-{names[(i + 1) % 4]}", L, bearing(a, b)))
+    edges.append((f"{names[i]}-{names[(i + 1) % 4]}", math.dist(a, b), bearing(a, b)))
+net_edges = []
+for i in range(4):
+    a, b = net[i], net[(i + 1) % 4]
+    net_edges.append((f"Q{i + 1}-Q{(i + 1) % 4 + 1}", math.dist(a, b), bearing(a, b)))
     u = unit(a, b)
     n = np.array([-u[1], u[0]])
     mid = np.add(a, b) / 2
@@ -218,22 +251,31 @@ A_calc = area(pts)
 dunam = int(A_calc // 2500)
 olk = int((A_calc - dunam * 2500) // 100)
 rem = A_calc - dunam * 2500 - olk * 100
+A_net = area(net)
 rows = [
     "SITE DATA - بيانات الموقع",
     "Investment opportunity 5/2026 - NIC - Residential complex",
     "Plot 157 / District 53 Baybokht - Nineveh",
-    "Coordinates: UTM WGS84 zone 38S (from cadastral map)",
+    "Coordinates: UTM WGS84 zone 38S",
     "",
+    "PLOT BOUNDARY (MATCHES ANNOUNCEMENT) - layer BOUNDARY",
+    "CORNER    EASTING       NORTHING",
+]
+rows += [f"{n:<8}  {q[0]:.2f}   {q[1]:.2f}" for n, q in Q.items()]
+rows += ["EDGE      LENGTH (m)   BEARING"]
+rows += [f"{n:<8}  {L:9.2f}    {dms(b)}" for n, L, b in net_edges]
+rows += [
+    f"AREA : {A_net:,.0f} m2 = 79 dunam 16 olk 75 m2 (as announced)",
+    f"= the coordinate polygon with both long sides set back {RESERVE:.2f} m (road reserve)",
+    "",
+    "CADASTRAL MAP COORDINATES - layer BOUNDARY_COORDS",
     "CORNER    EASTING       NORTHING",
 ]
 rows += [f"{n:<8}  {p[0]:.2f}   {p[1]:.2f}" for n, p in P.items()]
-rows += ["", "EDGE      LENGTH (m)   BEARING"]
+rows += ["EDGE      LENGTH (m)   BEARING"]
 rows += [f"{n:<8}  {L:9.2f}    {dms(b)}" for n, L, b in edges]
 rows += [
-    "",
-    f"AREA FROM COORDINATES : {A_calc:,.0f} m2 = {dunam} dunam {olk} olk {rem:.0f} m2",
-    f"AREA IN ANNOUNCEMENT  : {ANNOUNCED_M2:,.0f} m2 = 79 dunam 16 olk 75 m2",
-    f"DIFFERENCE            : {A_calc - ANNOUNCED_M2:,.0f} m2 ({(A_calc - ANNOUNCED_M2) / ANNOUNCED_M2:.1%})",
+    f"AREA : {A_calc:,.0f} m2 = {dunam} dunam {olk} olk {rem:.0f} m2 (+{A_calc - ANNOUNCED_M2:,.0f} m2)",
     "",
     "Layers *_APPROX are traced from the scanned map (affine fit, residual < 2 m):",
     "road widths, cross road, watercourse and trees must be confirmed by survey.",
@@ -255,7 +297,11 @@ doc.layers.get("SCAN_UNDERLAY").off()
 
 doc.saveas(OUT)
 print(OUT)
-print(f"area {A_calc:.1f} m2  ({dunam} dunam {olk} olk {rem:.0f} m2)")
+print(f"area {A_calc:.1f} m2  ({dunam} dunam {olk} olk {rem:.0f} m2)  net {A_net:.1f} m2  reserve {RESERVE:.3f} m")
+for n, q in Q.items():
+    print(n, f"{q[0]:.2f} {q[1]:.2f}")
+for e in net_edges:
+    print(e[0], f"{e[1]:.2f}", dms(e[2]))
 for e in edges:
     print(e[0], f"{e[1]:.2f}", dms(e[2]))
 for name, p in (("cross road W", cl0), ("cross road E", cl1)):
