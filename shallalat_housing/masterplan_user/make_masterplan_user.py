@@ -16,12 +16,12 @@ ROT = math.degrees(math.atan2(U[1], U[0]))
 
 NAMES = {
     "MALL": ("MALL", "المول"), "MOSQUE": ("MOSQUE", "الجامع"),
-    "POLICE_CD": ("POLICE + CIVIL DEFENCE", "الشرطة والدفاع المدني"), "HEALTH": ("HEALTH CENTRE", "المركز الصحي"),
+    "POLICE": ("POLICE", "الشرطة"), "CIVIL_DEF": ("CIVIL DEFENCE", "الدفاع المدني"), "HEALTH": ("HEALTH CENTRE", "المركز الصحي"),
     "SECONDARY": ("SECONDARY SCHOOL", "الثانوية (متوسطة + إعدادية)"), "PRIMARY": ("PRIMARY SCHOOL", "المدرسة الابتدائية"),
     "KG": ("KINDERGARTEN", "الروضة"), "WATER": ("WATER STATION", "محطة الماء"), "POWER": ("POWER STATION", "محطة الكهرباء"),
     "WASTE": ("WASTE", "النفايات"), "CLUB": ("SOCIAL CLUB + SPORTS", "النادي والملاعب"),
-    "PARK_MALL": ("PARKING", "موقف السيارات"), "G_HEALTH": ("GARDEN", "حديقة"), "G_SEC": ("GARDEN", "حديقة"),
-    "G_KG": ("GARDEN", "حديقة"),
+    "PARK_MALL": ("PARKING", "موقف السيارات"), "G_HEALTH": ("GARDEN", "حديقة"), "G_MALL": ("GARDEN", "حديقة"),
+    "G_KG": ("GARDEN", "حديقة"), "G_PRIM": ("GARDEN", "حديقة"),
 }
 UTIL_KEYS = ("WATER", "POWER", "WASTE")
 
@@ -29,7 +29,7 @@ UTIL_KEYS = ("WATER", "POWER", "WASTE")
 def table_rows():
     units = len(VILLAS) + len(HOUSES) + N_APTS
     rows = [
-        "IBRAHIM'S PROPOSAL - DEVELOPED - مقترح ابراهيم المطور",
+        "IBRAHIM'S PROPOSAL - DEVELOPED, REV 1 - مقترح ابراهيم المطور، تعديل 1",
         "Plot 157 / District 53 Baybokht - NIC 5/2026 - UTM 38S",
         "",
         f"UNITS: {len(VILLAS)} villas 400 m2 + {len(HOUSES)} houses 240 m2 + {N_APTS} flats = {units}",
@@ -50,13 +50,14 @@ LAYERS = {
     "MP_SERVICES": (1, 25), "MP_UTILITIES": (6, 25), "MP_PARKING": (9, 13), "MP_GREEN": (3, 13),
     "MP_TEXT": (7, 18), "MP_TEXT_PLOTNO": (8, 9), "MP_TABLE": (7, 18), "MP_NORTH": (7, 25),
     "MP_HATCH_RES": (31, 0), "MP_HATCH_SERV": (1, 0), "MP_HATCH_GREEN": (3, 0), "MP_HATCH_ROAD": (252, 0),
-    "MP_HATCH_TOWER": (5, 0),
+    "MP_HATCH_TOWER": (5, 0), "MP_LANDSCAPE": (94, 13), "MP_HATCH_LANDSCAPE": (94, 0),
 }
 # the architect's own colours
 FILL = {
     "villa": (254, 204, 102), "house": (242, 103, 34), "serv": (237, 31, 36), "util": (209, 156, 199),
     "green": (19, 103, 52), "park": (120, 186, 110), "plaza": (173, 221, 247), "tower": (39, 118, 187),
     "road": (225, 225, 225), "parking": (190, 190, 190),
+    "paving": (236, 226, 204), "lawn": (150, 205, 120), "water": (110, 180, 235), "play": (240, 214, 150),
 }
 
 
@@ -93,10 +94,14 @@ def write_dxf(path):
         hatch(p, "MP_HATCH_RES", FILL["house"])
     for g in STRIPS + [ROUNDABOUT_ISLAND]:
         hatch(g, "MP_HATCH_GREEN", FILL["green"])
-    for g in [BIG_PARK, OPEN["G_HEALTH"], OPEN["G_SEC"], OPEN["G_KG"]]:
+    for g in [BIG_PARK] + GARDENS:
         hatch(g, "MP_HATCH_GREEN", FILL["park"])
     hatch(OPEN["PARK_MALL"], "MP_HATCH_ROAD", FILL["parking"])
     hatch(PLAZA, "MP_HATCH_TOWER", FILL["plaza"])
+    hatch(LAWN, "MP_HATCH_LANDSCAPE", FILL["lawn"])
+    hatch(PAVING, "MP_HATCH_LANDSCAPE", FILL["paving"])
+    hatch(PLAY, "MP_HATCH_LANDSCAPE", FILL["play"])
+    hatch(CHANNEL.union(FOUNTAIN), "MP_HATCH_LANDSCAPE", FILL["water"])
     for t in TOWERS:
         hatch(t, "MP_HATCH_TOWER", FILL["tower"])
     for k, g in SERV.items():
@@ -113,7 +118,11 @@ def write_dxf(path):
     for t in TOWERS:
         outline(t, "MP_TOWERS")
     outline(PLAZA, "MP_PLAZA")
-    for g in STRIPS + [ROUNDABOUT_ISLAND, BIG_PARK, OPEN["G_HEALTH"], OPEN["G_SEC"], OPEN["G_KG"]]:
+    for g in (LAWN, PAVING, PLAY, CHANNEL, FOUNTAIN):
+        outline(g, "MP_LANDSCAPE")
+    for q in PLAZA_TREES:
+        msp.add_circle(utm(q), 2.5, dxfattribs={"layer": "MP_LANDSCAPE"})
+    for g in STRIPS + [ROUNDABOUT_ISLAND, BIG_PARK] + GARDENS:
         outline(g, "MP_GREEN")
     outline(OPEN["PARK_MALL"], "MP_PARKING")
     for k, g in SERV.items():
@@ -180,10 +189,16 @@ def write_preview(png, pdf):
         f(p, "house", ec="#7a3a10", lw=0.3)
     for g in STRIPS + [ROUNDABOUT_ISLAND]:
         f(g, "green", ec="none")
-    for g in [BIG_PARK, OPEN["G_HEALTH"], OPEN["G_SEC"], OPEN["G_KG"]]:
+    for g in [BIG_PARK] + GARDENS:
         f(g, "park", ec="#3a6a2a", lw=0.4)
     f(OPEN["PARK_MALL"], "parking", ec="#555", lw=0.4)
     f(PLAZA, "plaza", ec="#468", lw=0.5)
+    f(LAWN, "lawn", ec="none", z=2)
+    f(PAVING, "paving", ec="#998", lw=0.3, z=2)
+    f(PLAY, "play", ec="#975", lw=0.4, z=2)
+    f(CHANNEL.union(FOUNTAIN), "water", ec="#357", lw=0.4, z=2)
+    for q in PLAZA_TREES:
+        ax.add_patch(plt.Circle(q, 2.5, fc="#3d8a3d", ec="#1f4f1f", lw=0.3, zorder=4))
     for tw in TOWERS:
         f(tw, "tower", ec="#123", lw=0.8, z=3)
     for k, g in SERV.items():
@@ -202,7 +217,10 @@ def write_preview(png, pdf):
     for i, tw in enumerate(TOWERS):
         t(f"{'ABC'[i]}\nG+{FLOORS - 1}", tw.centroid.coords[0], 7, color="white", w="bold", z=11)
     q = PLAZA.representative_point()
-    t("PLAZA", (PLAZA.bounds[2] - 10, PLAZA.bounds[3] - 10), 6, ar_s="البلازا")
+    t("PLAY", PLAY.centroid.coords[0], 4.5, ar_s="ألعاب")
+    t("DROP-OFF", (DROPOFF.centroid.x - 2, DROPOFF.centroid.y), 4.5, ar_s="نزول")
+    t("PROMENADE + WATER CHANNEL", (CHANNEL.centroid.x, CHANNEL.centroid.y + 3.2), 3.6)
+    t("FOUNTAIN COURT", (FOUNTAIN.centroid.x, FOUNTAIN.centroid.y + 5), 3.6)
     t("MAIN GATE", (GATE_U, north_v(GATE_U) + 10), 9, ar_s="البوابة الرئيسية", w="bold", color="#b00")
     t("SERVICE / EMERGENCY GATE", (SGATE_U, -10), 8, ar_s="بوابة الخدمة والطوارئ", w="bold", color="#b00")
     t(f"{len(VILLAS)} VILLAS 400 m²", (243, north_v(243) + 8), 9, ar_s="فلل 400 متر", w="bold")
@@ -222,7 +240,7 @@ def write_preview(png, pdf):
     ax.set_aspect("equal")
     ax.axis("off")
 
-    fig.text(0.5, 0.965, "المخطط العام - مقترح ابراهيم المطوّر   |   MASTER PLAN - IBRAHIM'S PROPOSAL, DEVELOPED",
+    fig.text(0.5, 0.965, "المخطط العام - مقترح ابراهيم المطوّر (تعديل 1)   |   MASTER PLAN - IBRAHIM'S PROPOSAL, DEVELOPED - REV 1",
              ha="center", fontsize=26, fontweight="bold")
     fig.text(0.5, 0.945, "مجمع الشلالات السكني - القطعة 157 م53 بايبوخت - فرصة هيئة استثمار نينوى 5/2026", ha="center", fontsize=15)
     rows = table_rows()
@@ -244,7 +262,8 @@ def write_preview(png, pdf):
         tx.text(1.0, y, arb, fontsize=10, va="top", ha="right")
     key = [
         ("villa", "Villa plot 400 m²", "فلل 400 متر"), ("house", "House plot 240 m²", "دور 240 متر"),
-        ("tower", f"Tower G+{FLOORS - 1}", "الأبراج"), ("plaza", "Plaza over the basement car park", "البلازا فوق موقف السرداب"),
+        ("tower", f"Tower G+{FLOORS - 1}", "الأبراج"), ("paving", "Plaza paving over the basement car park", "بلاط البلازا فوق السرداب"),
+        ("lawn", "Plaza lawns", "مسطحات خضراء في البلازا"),
         ("serv", "Community services", "الخدمات"), ("util", "Utilities", "المرافق الفنية"),
         ("green", "Green strips", "الأشرطة الخضراء"), ("park", "Parks + gardens", "الحدائق"),
         ("parking", "Parking", "موقف سيارات"), ("road", "Roads", "الشوارع"),
@@ -261,17 +280,17 @@ def write_preview(png, pdf):
     nt = fig.add_axes([0.74, 0.02, 0.24, 0.26])
     nt.axis("off")
     notes = [
-        "تقسيم ابراهيم محفوظ كما رسمه: صفوف الفلل والدور، الأشرطة الخضراء،",
-        "المحور الوسطي والدوار، الشارع المحيط، والأبراج على البلازا.",
-        "الخدمات بالمساحات التي حددها: مول 3000، صحي 1000، شرطة ودفاع 600،",
-        "ابتدائية 3000، ثانوية 5000، ماء 1000، كهرباء 1000.",
-        "أضيف: روضة 1500، جامع 2000، نادي وملاعب 5000، نفايات 300،",
-        f"وموقف سرداب تحت البلازا لـ {PARK_NEED} سيارة (1.5 لكل شقة).",
-        "المول والجامع والصحي والشرطة قرب البوابة الرئيسية،",
-        "والمدارس والروضة في الداخل جنوب المحور.",
-        "الماء والكهرباء والنفايات على الشارع الجنوبي عند بوابة الخدمة.",
-        "المساحة الزائدة صارت الحديقة الكبرى وحدائق داخل البلوكات.",
-        "مدخلان فقط، كلاهما على الشارعين الطويلين.",
+        "تقسيم ابراهيم محفوظ: صفوف الفلل والدور، المحور والدوار، الشارع المحيط، الأبراج.",
+        "تعديل 1: الأشرطة الخضراء بين الصفوف صارت 40 م بدل 15 م.",
+        "تعديل 1: حول الدوار خدمات يومية فقط وسط حدائق: مول وموقفه،",
+        "صحي 1000، جامع 2000، روضة 1500، ابتدائية 3000.",
+        "الثانوية 5000 بجانب النادي والملاعب 5000 في المنطقة الغربية،",
+        "والشرطة 600 والدفاع المدني 600 عند بوابة الخدمة مع الماء والكهرباء والنفايات.",
+        "البلازا: نزول عند المحور، ممشى بقناة ماء بين البرجين A وB،",
+        "ساحة نافورة بين B وC، أرصفة حول الأبراج، مسطحات ومسار متعرج،",
+        "ألعاب أطفال، وصف أشجار على الحافة.",
+        f"موقف سرداب تحت البلازا لـ {PARK_NEED} سيارة (1.5 لكل شقة).",
+        "مدخلان فقط بدون تغيير: رئيسي شمالا وخدمة جنوبا.",
         "",
         "Layers MP_*; colours follow the architect's sketch.",
     ]
