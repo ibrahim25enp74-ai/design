@@ -5,7 +5,8 @@ Driver: privacy and security. The cross road stays public; the western part is a
 at about chainage 300 m with an inspection forecourt leads to a single distributor street. Off the
 distributor, gated cul-de-sac clusters (each lane <= 120 m) end in a green court. The service centre
 sits midway along the distributor, inside the main gate but outside the clusters. The two towers
-stand on the eastern island beyond the valley with their own entrance.
+stand in a separate eastern zone with their own entrance. The watercourse on the cadastral scan is
+ignored at the client's request.
 
 Geometry is laid out in a local frame (u along the south edge Q1->Q4, v across, towards the north
 edge) and written to the DXF in UTM 38S, on the same net boundary as SHALLALAT_SITE_PLAN.dxf.
@@ -69,10 +70,8 @@ def band(a, b, half, ext=0.0):
 # --- context ------------------------------------------------------------------------------------------
 CROSS_A, CROSS_B = scan(267, 251), scan(455, 214)
 CROSS = band(CROSS_A, CROSS_B, 5.0, ext=40).intersection(SITE_RAW)
-WC = [scan(x, y) for x, y in [(200, 603), (240, 606), (283, 608), (333, 607), (373, 598), (413, 599), (467, 620), (520, 637)]]
-WC_LINE = LineString(WC)
-VALLEY_HALF = 20.0  # floodway + walk on both banks
-VALLEY = WC_LINE.buffer(VALLEY_HALF).intersection(SITE)
+# the watercourse on the cadastral scan is ignored at the client's request: the land is continuous
+TOWER_ZONE_M2 = 25300.0  # tower zone of the functional program
 TREES = [scan(x, y) for x, y in [(310, 170), (355, 165), (395, 178), (300, 196), (343, 194), (385, 205), (420, 190)]]
 
 cross_dir = np.subtract(CROSS_B, CROSS_A) / math.dist(CROSS_A, CROSS_B)
@@ -91,15 +90,19 @@ def east_of_cross(off):
 WEST = SITE.difference(east_of_cross(5.0))             # public front
 CROSS_IN = SITE.intersection(CROSS)
 REST = SITE.intersection(east_of_cross(5.0))
-_parts = sorted(REST.difference(WC_LINE.buffer(VALLEY_HALF)).geoms, key=lambda g: g.centroid.x)
-GATED, ISLAND = _parts[0], _parts[-1]
+_lo, _hi = 500.0, 870.0
+for _ in range(60):  # straight split across the plot so the eastern tower zone gets its program area
+    U_SPLIT = (_lo + _hi) / 2
+    _lo, _hi = (U_SPLIT, _hi) if REST.intersection(box(U_SPLIT, -50, 2000, 500)).area > TOWER_ZONE_M2 else (_lo, U_SPLIT)
+GATED = REST.intersection(box(-2000, -50, U_SPLIT, 500))
+ISLAND = REST.intersection(box(U_SPLIT, -50, 2000, 500))
 
 BELT = 4.0  # planted belt inside the compound wall
 G_IN = GATED.buffer(-BELT, join_style="mitre")
 
 # --- distributor street ---------------------------------------------------------------------------
 SP_W = 18.0          # 2 x 6.5 m carriageway + 2.5 m tree-lined walks
-U_W, U_E = 176.0, 622.0
+U_W, U_E = 176.0, U_SPLIT - 4.0 - 26.0
 SA, SB = (U_W, north_v(U_W) / 2), (U_E, north_v(U_E) / 2)
 S_DIR = np.subtract(SB, SA) / math.dist(SA, SB)
 S_N = np.array([-S_DIR[1], S_DIR[0]])
@@ -198,12 +201,12 @@ def make_cluster(t0, side, kind, region, W=None):
 
 CL_N = G_IN.difference(SC_N.buffer(0.5)).difference(BOULEVARD.buffer(4)).difference(FORECOURT.buffer(6)).difference(ROUNDABOUT.buffer(2))
 CL_S = G_IN.difference(SC_S.buffer(0.5))
-UTIL_T0 = S_LEN - 20  # utilities yard by the valley, south side, own service gate on the south road
+UTIL_T0 = S_LEN - 20  # utilities yard at the east end, south side, own service gate on the south road
 CL_S = CL_S.difference(strip_poly(UTIL_T0, 1000, -1000, -SP_W / 2))
 
 
 # chosen by trying every V/H sequence: the one that reaches 100 villas with the most houses
-PLAN_N, PLAN_S = "VVVVH", "VVHHVV"
+PLAN_N, PLAN_S = "VVVHHV", "HHVVVVH"
 
 
 def pack(side, t_start, kinds):
@@ -216,9 +219,9 @@ def pack(side, t_start, kinds):
     return out
 
 
-# villas on the deep west wing and on the valley edge, attached houses near the centre
+# villas on the deep west wing and at the east end, attached houses near the centre
 CLUSTERS = (pack("N", -34.0, "VH") + pack("N", SC_N_T[1] + 2, PLAN_N)
-            + pack("S", -22.0, "HV") + pack("S", SC_S_T[1] + 2, PLAN_S))
+            + pack("S", -22.0, "VH") + pack("S", SC_S_T[1] + 2, PLAN_S))
 CLUSTERS.sort(key=lambda c: (c["side"] == "S", c["t0"]))
 for i, c in enumerate(CLUSTERS):
     c["name"] = f"C{i + 1}"
@@ -229,8 +232,9 @@ UTIL = strip_poly(UTIL_T0 + 4, 1000, -1000, -SP_W / 2 - 4).intersection(G_IN)
 UTIL_ITEMS = {}
 _ub = UTIL.bounds
 _uw = (_ub[2] - _ub[0])
-UTIL_ITEMS["DESAL"] = UTIL.intersection(box(_ub[0], _ub[1], _ub[2], _ub[1] + 62))
-UTIL_ITEMS["SEWAGE"] = UTIL.intersection(box(_ub[0], _ub[1] + 66, _ub[2], _ub[3]))
+_cut = _ub[1] + (_ub[3] - _ub[1]) * 0.58
+UTIL_ITEMS["DESAL"] = UTIL.intersection(box(_ub[0], _ub[1], _ub[2], _cut - 2))
+UTIL_ITEMS["SEWAGE"] = UTIL.intersection(box(_ub[0], _cut + 2, _ub[2], _ub[3]))
 
 # leftovers inside the compound become shared gardens / play grounds
 _used = unary_union([c["strip"] for c in CLUSTERS] + [SPINE, ROUNDABOUT, BOULEVARD, FORECOURT, UTIL] + list(SC_ITEMS.values()))
@@ -248,7 +252,8 @@ T_PARK = box(722, 112, 766, 150).intersection(ISLAND.buffer(-6))
 T_RAMP = box(T_ENTRY_U + 8, 118, T_ENTRY_U + 14, 146)
 T_POOL = box(768, 18, 796, 34)
 T_PLAY = box(830, 14, 846, 40).intersection(ISLAND.buffer(-6))
-BRIDGE = band(sp(S_LEN, 0), (730, 92), 1.8).difference(Point(SB).buffer(TURN_R)).difference(T_PARK)
+BRIDGE = band(sp(S_LEN, 0), (U_SPLIT + 14, sp(S_LEN, 0)[1]), 1.8).difference(Point(SB).buffer(TURN_R))
+PED_GATE = LineString([(U_SPLIT, sp(S_LEN, 0)[1] - 3), (U_SPLIT, sp(S_LEN, 0)[1] + 3)])
 
 # --- public front (west of the cross road) --------------------------------------------------------
 W_IN = WEST.buffer(-3, join_style="mitre")
@@ -303,7 +308,7 @@ LANDUSE = [
     ("Service centre - المركز الخدمي", total(SC_ITEMS.values())),
     ("Utilities - المرافق الفنية", total(UTIL_ITEMS.values())),
     ("Distributor, gate, forecourt - الموزع والبوابة", unary_union([SPINE, ROUNDABOUT, BOULEVARD, FORECOURT]).intersection(GATED).area),
-    ("Parks, orchard, valley, belts - الحدائق والوادي", 0.0),
+    ("Parks, orchard, belts - الحدائق والأحزمة", 0.0),
     ("Cross road (public) - الشارع العرضي", CROSS_IN.intersection(SITE).area),
 ]
 LANDUSE[-2] = (LANDUSE[-2][0], SITE.area - sum(a for _, a in LANDUSE))
@@ -315,7 +320,7 @@ LAYERS = {
     "MP_ROADS": (8, 25), "MP_ROAD_CL": (8, 13), "MP_LANES": (8, 18), "MP_PARKING": (9, 13),
     "MP_PLOT_VILLA": (30, 18), "MP_PLOT_HOUSE": (40, 18), "MP_FOOTPRINT": (7, 25), "MP_TOWERS": (1, 50),
     "MP_SERVICES": (200, 25), "MP_SERVICE_CENTRE": (210, 25), "MP_UTILITIES": (8, 25),
-    "MP_GREEN_COURT": (3, 13), "MP_GREEN_PARK": (94, 13), "MP_VALLEY": (5, 25), "MP_TREES": (3, 13),
+    "MP_GREEN_COURT": (3, 13), "MP_GREEN_PARK": (94, 13), "MP_TREES": (3, 13),
     "MP_CONTEXT": (8, 13), "MP_TEXT": (7, 18), "MP_TEXT_PLOTNO": (8, 9), "MP_TABLE": (7, 18), "MP_NORTH": (7, 25),
     "MP_HATCH_RES": (31, 0), "MP_HATCH_SERV": (211, 0), "MP_HATCH_GREEN": (93, 0), "MP_HATCH_ROAD": (252, 0),
     "MP_HATCH_WATER": (151, 0), "MP_HATCH_TOWER": (11, 0),
@@ -362,7 +367,6 @@ def write_dxf(path):
         t.set_placement(utm(at), align=TextEntityAlignment.MIDDLE_CENTER)
 
     # hatches first so outlines draw on top
-    hatch(VALLEY, "MP_HATCH_WATER", FILL["water"])
     hatch(ORCHARD, "MP_HATCH_GREEN", FILL["park"])
     for g in GARDENS:
         hatch(g, "MP_HATCH_GREEN", FILL["garden"])
@@ -416,6 +420,7 @@ def write_dxf(path):
     outline(T_PARK, "MP_PARKING")
     outline(T_RAMP, "MP_PARKING")
     outline(BRIDGE, "MP_ROADS")
+    line(PED_GATE, "MP_GATES")
     # utilities gate on the south road, emergency gate to the cross road
     ub = UTIL.bounds
     line(LineString([(ub[0] + 10, 0.5), (ub[0] + 22, 0.5)]), "MP_GATES")
@@ -446,8 +451,6 @@ def write_dxf(path):
     outline(ORCHARD, "MP_GREEN_PARK")
     for g in GARDENS:
         outline(g, "MP_GREEN_PARK")
-    outline(VALLEY, "MP_VALLEY")
-    msp.add_spline([utm(p) for p in WC], dxfattribs={"layer": "MP_VALLEY"})
     for t in TREES:
         msp.add_circle(utm(t), 4, dxfattribs={"layer": "MP_TREES"})
     # outer roads (approx., from the cadastral scan)
@@ -509,11 +512,10 @@ NAMES = {
     "SPINE": ("DISTRIBUTOR STREET 18 m", "الشارع الموزع"),
     "ORCHARD_IN": ("ORCHARD GARDEN", "حديقة البستان"),
     "PARK": ("OPEN PUBLIC PARK", "حديقة عامة مفتوحة"),
-    "VALLEY": ("VALLEY PARK", "حديقة الوادي"),
     "TOWERS": ("TOWER ZONE - SEPARATE ENTRANCE", "منطقة البرجين بمدخل مستقل"),
     "CROSS": ("CROSS ROAD - STAYS PUBLIC", "الشارع العرضي يبقى عاما"),
     "PUBLIC": ("PUBLIC FRONT", "الواجهة العامة"),
-    "BRIDGE": ("FOOT BRIDGE", "جسر مشاة"),
+    "BRIDGE": ("CONTROLLED PEDESTRIAN GATE", "بوابة مشاة مراقبة"),
     "TGATE": ("TOWER GATE", "بوابة البرجين"),
     "UGATE": ("SERVICE GATE", "بوابة خدمة"),
     "EGATE": ("EMERGENCY GATE", "بوابة طوارئ"),
@@ -525,7 +527,7 @@ LABELS = {
     "GATE": (GATE_U, GATE_V + 34),
     "SPINE": sp(S_LEN * 0.72, 0),
     "PARK": tuple(ORCHARD.representative_point().coords[0]),
-    "VALLEY": (WC_LINE.interpolate(WC_LINE.project(Point(680, 100))).x + 2, 150),
+    "BRIDGE": (U_SPLIT + 4, sp(S_LEN, 0)[1] + 14),
     "TOWERS": (790, 140 - 50),
     "CROSS": tuple(np.add(CROSS_A, cross_dir * 60)),
     "PUBLIC": (40, 316),
@@ -588,7 +590,6 @@ def write_preview(png, pdf):
                 fontweight=w, color=color, zorder=z, linespacing=1.1)
 
     f(SITE, "garden", ec="none")
-    f(VALLEY, "water", ec="none")
     f(ORCHARD, "park", ec="none")
     for g in GARDENS:
         f(g, "garden", ec="none")
@@ -628,14 +629,12 @@ def write_preview(png, pdf):
     f(T_PARK, "park_lot", ec="#777")
     f(T_POOL, "water", ec="#468")
     f(BRIDGE, "road", ec="#444")
+    ax.plot(*PED_GATE.xy, color="#d00", lw=2.5, zorder=5)
     for tw in TOWERS:
         f(tw, "tower", ec="#5a1e1e", lw=0.8, z=5)
     f(SITE, None, ec="#c00", lw=1.6, z=6)
     f(GATED, None, ec="#333", lw=1.0, z=6)
     f(ISLAND, None, ec="#333", lw=1.0, z=6)
-    wc_in = WC_LINE.intersection(SITE.buffer(15))
-    for ln in getattr(wc_in, "geoms", [wc_in]):
-        ax.plot(*ln.xy, color="#2a6fb0", lw=1.4, zorder=2)
     for tr in TREES:
         ax.add_patch(plt.Circle(tr, 4, fc="#3d8a3d", ec="#1f4f1f", lw=0.4, zorder=7))
 
@@ -691,7 +690,7 @@ def write_preview(png, pdf):
         ("tower", "Tower G+19", "برج"), ("pub", "Public front services", "خدمات الواجهة العامة"),
         ("sc", "Service centre (inside the gate)", "المركز الخدمي داخل البوابة"), ("util", "Utilities", "مرافق فنية"),
         ("court", "Cluster green court", "فناء أخضر للتجمع"), ("park", "Park / orchard", "حديقة / بستان"),
-        ("garden", "Gardens, belts", "حدائق وأحزمة خضراء"), ("water", "Valley / water", "الوادي"),
+        ("garden", "Gardens, belts", "حدائق وأحزمة خضراء"), ("water", "Pool", "مسبح"),
         ("road", "Streets", "شوارع"), ("lane", "Cluster cul-de-sac (8 m shared surface)", "زقاق مغلق"),
     ]
     lg = fig.add_axes([0.50, 0.02, 0.22, 0.26])
@@ -713,11 +712,11 @@ def write_preview(png, pdf):
         "كل تجمع زقاق مغلق 120 م أو أقل، ببوابة وكشك حراسة،",
         "وينتهي بفناء أخضر. ظهور القطع متلاصقة فتصبح أسوار التجمعات.",
         "المركز الخدمي في منتصف الموزع: سوق، نادي، روضة، إدارة.",
-        "البرجان على الجزيرة الشرقية بعد الوادي، بمدخل مستقل وجسر مشاة.",
+        "البرجان في المنطقة الشرقية بمدخل مستقل، وبوابة مشاة مراقبة إلى الموزع.",
         "المدارس خارج البوابة حتى لا تدخل حركة الطلبة إلى التجمعات.",
         "",
         "Layers MP_*: plots, footprints, gates, hatches are separate.",
-        "Outer roads, cross road, valley, trees: approx. from the",
+        "Outer roads, cross road, trees: approx. from the",
         "cadastral scan, to be confirmed by survey.",
     ]
     for i, n in enumerate(notes):
@@ -736,7 +735,7 @@ if __name__ == "__main__" and "--check" not in sys.argv:
 
 if __name__ == "__main__" and "--check" in sys.argv:
     print(f"site {SITE.area:,.0f}  west {WEST.area:,.0f}  cross {CROSS_IN.area:,.0f}  gated {GATED.area:,.0f}"
-          f"  valley {VALLEY.area:,.0f}  island {ISLAND.area:,.0f}")
+          f"  split u={U_SPLIT:.1f}  tower zone {ISLAND.area:,.0f}")
     print(f"villas {len(VILLAS)}  houses {len(HOUSES)}  tower gap {TOWER_GAP:.1f}")
     for c in CLUSTERS:
         print(c["side"], c["kind"], f"t0={c['t0']:.0f}", len(c["plots"]), f"lane {c['lane_len']:.0f} court {c['court'].area:.0f}")
