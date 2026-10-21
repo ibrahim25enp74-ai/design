@@ -11,6 +11,7 @@ import numpy as np
 from ezdxf.enums import TextEntityAlignment
 
 from layout_user import *  # noqa: F401,F403  (geometry of the layout)
+from landscape_user import LANDSCAPE, PLAZA_LS
 
 ROT = math.degrees(math.atan2(U[1], U[0]))
 
@@ -29,7 +30,7 @@ UTIL_KEYS = ("WATER", "POWER", "WASTE")
 def table_rows():
     units = len(VILLAS) + len(HOUSES) + N_APTS
     rows = [
-        "IBRAHIM'S PROPOSAL - DEVELOPED, REV 2 - مقترح ابراهيم المطور، تعديل 2",
+        "IBRAHIM'S PROPOSAL - DEVELOPED, REV 3 - مقترح ابراهيم المطور، تعديل 3",
         "Plot 157 / District 53 Baybokht - NIC 5/2026 - UTM 38S",
         "",
         f"UNITS: {len(VILLAS)} villas 400 m2 + {len(HOUSES)} houses 240 m2 + {N_APTS} flats = {units}",
@@ -58,7 +59,9 @@ FILL = {
     "green": (19, 103, 52), "park": (120, 186, 110), "plaza": (173, 221, 247), "tower": (39, 118, 187),
     "road": (225, 225, 225), "parking": (190, 190, 190),
     "paving": (236, 226, 204), "lawn": (150, 205, 120), "water": (110, 180, 235), "play": (240, 214, 150),
-    "shrub": (70, 140, 60), "flower": (232, 150, 180), "tree": (46, 120, 50),
+    "shrub": (78, 120, 52), "flower": (232, 150, 180), "tree": (46, 120, 50),
+    "ls_lawn": (150, 196, 74), "ls_pave": (214, 214, 210), "ls_track": (226, 150, 132), "ls_gravel": (196, 194, 186),
+    "ls_deck": (204, 146, 100), "ls_pit": (110, 160, 70),
 }
 
 
@@ -101,8 +104,6 @@ def write_dxf(path):
         hatch(g, "MP_HATCH_GREEN", FILL["park"])
     hatch(OPEN["PARK_MALL"], "MP_HATCH_ROAD", FILL["parking"])
     hatch(PLAZA, "MP_HATCH_TOWER", FILL["plaza"])
-    hatch(LAWN, "MP_HATCH_LANDSCAPE", FILL["lawn"])
-    hatch(PAVING, "MP_HATCH_LANDSCAPE", FILL["paving"])
     hatch(PLAY, "MP_HATCH_LANDSCAPE", FILL["play"])
     hatch(CHANNEL.union(FOUNTAIN), "MP_HATCH_LANDSCAPE", FILL["water"])
     for t in TOWERS:
@@ -125,9 +126,7 @@ def write_dxf(path):
     outline(PLAZA, "MP_PLAZA")
     for g in (LAWN, PAVING, PLAY, CHANNEL, FOUNTAIN):
         outline(g, "MP_LANDSCAPE")
-    for q in PLAZA_TREES:
-        msp.add_circle(utm(q), 2.5, dxfattribs={"layer": "MP_TREES"})
-    for g in [DROP_ISLAND, HEDGE] + PLANTERS:
+    for g in [DROP_ISLAND] + PLANTERS:
         hatch(g, "MP_HATCH_LANDSCAPE", FILL["shrub"])
         outline(g, "MP_GARDEN_BEDS")
     outline(FOUNTAIN_RING, "MP_LANDSCAPE")
@@ -135,20 +134,17 @@ def write_dxf(path):
         outline(g, "MP_LANDSCAPE")
     for q in PALMS:
         msp.add_circle(utm(q), 1.4, dxfattribs={"layer": "MP_TREES"})
-    for d in GARDEN_DESIGN:
-        for g in d["paths"] + d["nodes"]:
-            hatch(g, "MP_HATCH_LANDSCAPE", FILL["paving"])
-            outline(g, "MP_GARDEN_PATH")
-        for g in d["pools"]:
-            hatch(g, "MP_HATCH_LANDSCAPE", FILL["water"])
-            outline(g, "MP_GARDEN_PATH")
-        for g in d["beds"]:
-            hatch(g, "MP_HATCH_LANDSCAPE", FILL["shrub"])
-            outline(g, "MP_GARDEN_BEDS")
-        for g in d["flowers"]:
-            hatch(g, "MP_HATCH_LANDSCAPE", FILL["flower"])
-            outline(g, "MP_GARDEN_BEDS")
-        for x, y, r in d["trees"]:
+    for d in LANDSCAPE + [PLAZA_LS]:
+        for key, fill, lay in (("paving", "ls_pave", "MP_LANDSCAPE"), ("gravel", "ls_gravel", "MP_LANDSCAPE"),
+                               ("lawn", "ls_lawn", "MP_GARDEN_BEDS"), ("shrub", "shrub", "MP_GARDEN_BEDS"),
+                               ("deck", "ls_deck", "MP_LANDSCAPE"), ("track", "ls_track", "MP_GARDEN_PATH"),
+                               ("pits", "ls_pit", "MP_LANDSCAPE"), ("bench", "paving", "MP_LANDSCAPE")):
+            for g in d[key]:
+                hatch(g, "MP_HATCH_LANDSCAPE", FILL[fill])
+                outline(g, lay)
+        for ln in d["contour"] + d["stripes"]:
+            msp.add_lwpolyline([utm(q) for q in ln.coords], dxfattribs={"layer": "MP_LANDSCAPE"})
+        for x, y, r in d["trees"] + d["palms"]:
             msp.add_circle(utm((x, y)), r, dxfattribs={"layer": "MP_TREES"})
     for g in STRIPS + [ROUNDABOUT_ISLAND, BIG_PARK] + GARDENS:
         outline(g, "MP_GREEN")
@@ -222,43 +218,60 @@ def write_preview(png, pdf):
     for p in HOUSES:
         f(p, "house", ec="#7a3a10", lw=0.3)
     for g in STRIPS:
-        f(g, "lawn", ec="#3a6a2a", lw=0.4)
+        f(g, "ls_gravel", ec="#777", lw=0.4)
     f(ROUNDABOUT_ISLAND, "green", ec="none")
     f(MINI_ISLAND, "green", ec="none", z=2)
     ax.add_patch(plt.Circle(MRB_C, MRB_R, fc="none", ec="#888", lw=0.5, ls="--", zorder=2))
     for g in [BIG_PARK] + GARDENS:
-        f(g, "park", ec="#3a6a2a", lw=0.4)
+        f(g, "ls_gravel", ec="#777", lw=0.4)
     f(OPEN["PARK_MALL"], "parking", ec="#555", lw=0.4)
     f(PLAZA, "plaza", ec="#468", lw=0.5)
-    f(LAWN, "lawn", ec="none", z=2)
-    f(PAVING, "paving", ec="#998", lw=0.3, z=2)
     f(PLAY, "play", ec="#975", lw=0.4, z=3.5)
-    f(CHANNEL.union(FOUNTAIN), "water", ec="#357", lw=0.4, z=2)
-    for q in PLAZA_TREES:
-        ax.add_patch(plt.Circle(q, 2.5, fc="#3d8a3d", ec="#1f4f1f", lw=0.3, zorder=4))
-    f(HEDGE, "shrub", ec="none", z=3)
+
+    def palm(x, y, r, z=5):
+        ax.add_patch(plt.Circle((x, y), r * 0.35, fc="#7a9a3a", ec="none", zorder=z))
+        for a_ in np.linspace(0, 2 * np.pi, 9, endpoint=False):
+            ax.plot([x, x + r * np.cos(a_)], [y, y + r * np.sin(a_)], color="#4f7a22", lw=0.9, zorder=z,
+                    solid_capstyle="round")
+
+    for d in LANDSCAPE + [PLAZA_LS]:
+        for g in d["gravel"]:
+            f(g, "ls_gravel", ec="#999", lw=0.2, z=2)
+        for g in d["paving"]:
+            f(g, "ls_pave", ec="#9a9a96", lw=0.25, z=2)
+        for ln in d["stripes"]:
+            ax.plot(*ln.xy, color="#c4c4bf", lw=0.25, zorder=2.1)
+        for g in d["lawn"]:
+            f(g, "ls_lawn", ec="#5d7f2a", lw=0.45, z=2.2)
+        for ln in d["contour"]:
+            ax.plot(*ln.xy, color="#7aa040", lw=0.3, zorder=2.3)
+        for g in d["shrub"]:
+            f(g, "shrub", ec="#3f6328", lw=0.25, z=2.4)
+        for g in d["deck"]:
+            f(g, "ls_deck", ec="#8a5a30", lw=0.4, z=2.2)
+        for g in d["bench"]:
+            f(g, None, ec="#555", lw=0.5, z=2.5)
+            f(g, "paving", ec="#555", lw=0.4, z=2.5)
+        for g in d["track"]:
+            f(g, "ls_track", ec="#b07060", lw=0.3, z=2.6)
+        for g in d["pits"]:
+            f(g, "ls_pit", ec="#4a6a2a", lw=0.2, z=2.7)
+        for x, y, r in d["trees"]:
+            ax.add_patch(plt.Circle((x, y), r, fc="#4f8f3a", ec="#2c5a20", lw=0.35, alpha=0.85, zorder=4))
+        for x, y, r in d["palms"]:
+            palm(x, y, r)
+    f(CHANNEL.union(FOUNTAIN), "water", ec="#357", lw=0.4, z=3)
     f(DROP_ISLAND, "shrub", ec="#2f5a28", lw=0.3, z=3)
-    f(FOUNTAIN_RING, "paving", ec="#998", lw=0.3, z=3)
-    f(FOUNTAIN, "water", ec="#357", lw=0.4, z=3)
+    f(FOUNTAIN_RING, "ls_pave", ec="#999", lw=0.3, z=3)
+    f(FOUNTAIN, "water", ec="#357", lw=0.4, z=3.1)
     for g in PLANTERS:
         f(g, "shrub", ec="#2f5a28", lw=0.3, z=3)
     for g in JETS:
         f(g, None, ec="white", lw=0.5, z=4)
     for g in PLAY_KIT:
-        f(g, "flower", ec="#a05070", lw=0.3, z=3)
+        f(g, "flower", ec="#a05070", lw=0.3, z=3.6)
     for x, y in PALMS:
-        ax.add_patch(plt.Circle((x, y), 1.4, fc="#6aa84f", ec="#274e13", lw=0.4, zorder=5))
-    for d in GARDEN_DESIGN:
-        for g in d["paths"] + d["nodes"]:
-            f(g, "paving", ec="#b8a888", lw=0.25, z=3)
-        for g in d["pools"]:
-            f(g, "water", ec="#357", lw=0.3, z=3)
-        for g in d["beds"]:
-            f(g, "shrub", ec="#2f5a28", lw=0.25, z=3)
-        for g in d["flowers"]:
-            f(g, "flower", ec="#a05070", lw=0.25, z=3)
-        for x, y, r in d["trees"]:
-            ax.add_patch(plt.Circle((x, y), r, fc=rgb["tree"], ec="#173f17", lw=0.3, alpha=0.9, zorder=4))
+        palm(x, y, 2.2)
     for tw in TOWERS:
         f(tw, "tower", ec="#123", lw=0.8, z=3)
     for k, g in SERV.items():
@@ -300,7 +313,7 @@ def write_preview(png, pdf):
     ax.set_aspect("equal")
     ax.axis("off")
 
-    fig.text(0.5, 0.965, "المخطط العام - مقترح ابراهيم المطوّر (تعديل 2)   |   MASTER PLAN - IBRAHIM'S PROPOSAL, DEVELOPED - REV 2",
+    fig.text(0.5, 0.965, "المخطط العام - مقترح ابراهيم المطوّر (تعديل 3)   |   MASTER PLAN - IBRAHIM'S PROPOSAL, DEVELOPED - REV 3",
              ha="center", fontsize=26, fontweight="bold")
     fig.text(0.5, 0.945, "مجمع الشلالات السكني - القطعة 157 م53 بايبوخت - فرصة هيئة استثمار نينوى 5/2026", ha="center", fontsize=15)
     rows = table_rows()
@@ -349,8 +362,8 @@ def write_preview(png, pdf):
         "البلازا: نزول عند المحور، ممشى بقناة ماء بين البرجين A وB،",
         "ساحة نافورة بين B وC، أرصفة حول الأبراج، مسطحات ومسار متعرج،",
         "ألعاب أطفال، وصف أشجار على الحافة.",
-        "تعديل 2: كل المساحات الخضراء حدائق مصممة: مسار متعرج، نقطة جلوس بنافورة،",
-        "أحواض زهور وشجيرات، وأشجار كل 8 م تقريبا.",
+        "تعديل 3: الحدائق على أسلوب الصورة المرجعية: مسار ملون بزوايا، مسطحات مضلعة مرتفعة،",
+        "ساحات مبلطة بمربعات أشجار، رصيف خشبي بمقعد منحن، نخيل وأحزمة شجيرات.",
         f"موقف سرداب تحت البلازا لـ {PARK_NEED} سيارة (1.5 لكل شقة).",
         "مدخلان فقط بدون تغيير: رئيسي شمالا وخدمة جنوبا.",
         "",
