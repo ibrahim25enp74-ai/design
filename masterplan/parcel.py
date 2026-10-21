@@ -55,7 +55,8 @@ def nblob(pts, n=3):
 
 
 def sd_bounds(poly, e=N):
-    cs = [e.sd(c) for c in poly.exterior.coords]
+    g = poly if isinstance(poly, Polygon) else poly.convex_hull
+    cs = [e.sd(c) for c in g.exterior.coords]
     ss, dd = [c[0] for c in cs], [c[1] for c in cs]
     return min(ss), max(ss), min(dd), max(dd)
 
@@ -203,9 +204,15 @@ class Scheme:
                                       "block": b})
                 zone = zone.difference(unary_union([l["poly"] for l in self.lots if l["block"] is b]))
                 zone = zone.buffer(0.05)
-        res = [b["poly"] for b in self.blocks if b["spec"].get("rows")]
         lots_u = unary_union([l["poly"] for l in self.lots]) if self.lots else Polygon()
-        self.jeera = unary_union(res).difference(lots_u) if res else Polygon()
+        jeera, park = [], []
+        for b in self.blocks:
+            if not b["spec"].get("rows"):
+                continue
+            rest = b["poly"].difference(lots_u)
+            (park if b["spec"].get("residual") == "park" else jeera).append(rest)
+        self.jeera = unary_union(jeera) if jeera else Polygon()
+        self.valley = unary_union(park) if park else Polygon()
 
     # ------------------------------------------------ figures
     def units(self):
@@ -218,7 +225,13 @@ class Scheme:
     def area_by_use(self):
         out = {}
         for b in self.blocks:
+            if b["spec"].get("rows"):
+                continue
             out[b["use"]] = out.get(b["use"], 0.0) + b["poly"].area
+        out["lots_V"] = sum(l["poly"].area for l in self.lots if l["type"] == "V")
+        out["lots_D"] = sum(l["poly"].area for l in self.lots if l["type"] == "D")
+        out["jeera"] = self.jeera.area
+        out["valley"] = self.valley.area
         out["roads"] = self.road_area.area
         out["belt"] = self.belt_area.area
         return out
