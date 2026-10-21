@@ -5,10 +5,10 @@ the north edge, metres) and transformed to UTM 38S when written. Every feature i
 (layer, shapely geometry, label) so the DXF writer and the preview draw the same thing.
 
 Concept: a continuous park runs down the length of the plot from the cross road to the
-watercourse (the "valley"). Cars stay on a collector loop near the plot edges and reach the
+east end (the "valley"). The watercourse on the cadastral map is ignored, as the client asked. Cars stay on a collector loop near the plot edges and reach the
 houses by short cul-de-sacs (Radburn); every house backs onto green - a green court, a green
 finger, the park, or the perimeter belt with the jogging track - and green fingers with rain
-channels drain into the park stream and on to the wadi (Village Homes). Only the entry street
+channels drain into the park stream and a rain pond at its east end (Village Homes). Only the entry street
 crosses the park, at the plaza with the waterfalls.
 """
 import math
@@ -63,11 +63,7 @@ def u_cross(v):
     return XR_A[0] + (XR_B[0] - XR_A[0]) * (v - XR_A[1]) / (XR_B[1] - XR_A[1])
 
 
-# watercourse centreline (scan trace) and existing trees, local coords
-WADI = [to_local(p) for p in [
-    (339539, 4035134), (339554, 4035161), (339568, 4035188), (339582, 4035217), (339597, 4035247),
-    (339613, 4035281), (339626, 4035317), (339632, 4035347), (339638, 4035377), (339648, 4035406),
-    (339664, 4035432), (339693, 4035465), (339726, 4035496), (339755, 4035527), (339782, 4035560)]]
+# existing trees (scan trace), local coords
 TREES = [to_local(p) for p in [
     (339005.0, 4035524.0), (339025.6, 4035589.3), (339068.2, 4035637.7), (339035.0, 4035495.9),
     (339058.6, 4035556.7), (339099.5, 4035609.0), (339100.1, 4035665.9)]]
@@ -80,7 +76,8 @@ LANE = 7.0  # cul-de-sac (shared surface); 7 + 2 x front setback >= 12 m between
 COURT = 6.0  # green court between the back gardens of two clusters
 FINGER = 20.0  # green finger with rain channel
 ENDGAP = 6.0  # turning head where a cul-de-sac meets the park
-WADI_HALF = 30.0  # half width of the wadi park
+EAST0 = 712.0  # east service zone (school, club, utilities) starts here
+EAST_GREEN = 10.0  # green strip with the jogging track between the houses and the east zone
 VILLA = dict(f=16.0, d=25.0, front=4.0, side=2.0, bw=12.0, bd=10.0)  # 400 m2, 120 m2 footprint = 30 %
 HOUSE = dict(f=10.0, d=20.0, front=2.5, side=0.0, bw=10.0, bd=12.0)  # 200 m2, 120 m2 footprint = 60 %
 
@@ -102,14 +99,7 @@ def w_leg(v):
     return a, a + LEG
 
 
-WADI_LINE = LineString(WADI)
-WADI_PARK = SITE.intersection(WADI_LINE.buffer(WADI_HALF))
-
-
-def wadi_west(v):
-    """u of the west edge of the wadi park at height v."""
-    hits = WADI_PARK.intersection(LineString([(500, v), (900, v)]))
-    return hits.bounds[0] if not hits.is_empty else 700.0
+CORE_E = EAST0 - EAST_GREEN  # east limit of the housing core
 
 
 # park: ~40 m wide down the middle of the core, opening to ~58 m at the plaza and widening at the ends
@@ -141,8 +131,8 @@ def p_n(u):
 SEQ = {
     "NW": ["V", "C", "V", "F", "V", "C", "H"],
     "SW": ["H", "C", "H", "F", "H", "C"],
-    "SE": [2, "H", "C", "H", "F", "H"],
-    "NE": [4, "H", "C", "H"],
+    "SE": [2, "H", "C", "H", "F", "H", "C"],
+    "NE": [4, "H", "C", "H", "C", "H"],
 }
 BANDS = {}
 F = []  # (layer, geom, label)
@@ -320,13 +310,11 @@ def build():
     add("MP-ROAD-LOCAL", west.intersection(rect(-60, sch1 + 8, xw(230), sch1 + 14)))
 
     # ================= CORE: loop, park, housing ================================================
-    ue = wadi_west(S_LEG[1]) + 2
-    tail = SITE.difference(WADI_LINE.buffer(WADI_HALF)).difference(box(-100, -10, 650, 400))
-    tail = max(tail.geoms, key=lambda g: g.area) if tail.geom_type == "MultiPolygon" else tail
-    t0 = tail.bounds[0] + 2
-    s_end = t0 + 6  # the south leg crosses the wadi on a bridge
+    tail = SITE.difference(box(-100, -10, EAST0, 400))
+    t0 = EAST0 + 2
+    s_end = t0 + 6  # the south leg runs on into the east zone
     s_leg = rect(w_leg(S_LEG[0])[0], S_LEG[0], s_end, S_LEG[1])
-    n_end = wadi_west(n_leg(640)[0]) - 18
+    n_end = CORE_E - 18
     nw = w_leg(n_leg(140)[1])[0]
     n_leg_poly = Polygon([(nw, n_leg(nw)[0]), (n_end, n_leg(n_end)[0]), (n_end, n_leg(n_end)[1]), (nw, n_leg(nw)[1])])
     w_leg_poly = Polygon([(w_leg(S_LEG[0])[0], S_LEG[0]), (w_leg(S_LEG[0])[1], S_LEG[0]),
@@ -338,20 +326,19 @@ def build():
     add("MP-ROAD-CL", LineString([(w_leg(sc)[0] + 6, sc), (s_end, sc)]))
     add("MP-ROAD-CL", LineString([(nw + 6, n_leg(nw + 6)[0] + 6), (n_end, n_leg(n_end)[0] + 6)]))
     add("MP-ROAD-CL", LineString([(w_leg(sc)[0] + 6, sc), (w_leg(n_leg(140)[0])[0] + 6, n_leg(140)[0] + 6)]))
-    add("MP-BRIDGE", rect(ue - 4, S_LEG[0] - 2, s_end - 6, S_LEG[1] + 2), "جسر على الوادي")
     add("MP-GATE", LineString([(w_leg(sc)[0], S_LEG[0]), (w_leg(sc)[0], S_LEG[1])]), "بوابة ثانوية")
 
     # perimeter green belt with the jogging track
     ub0 = w_leg(0)[0]
-    belt_s = rect(ub0, 0, t0 - 2, BELT)
+    belt_s = rect(ub0, 0, CORE_E, BELT)
     belt_n = Polygon([(nw, vn(nw) - BELT), (n_end + 30, vn(n_end + 30) - BELT),
                       (n_end + 30, vn(n_end + 30)), (nw, vn(nw))])
     add("MP-GREEN-BELT", belt_s.union(belt_n), "حزام أخضر ومسار جري")
-    add("MP-JOG", LineString([(ub0, BELT / 2), (t0 - 6, BELT / 2)]))
+    add("MP-JOG", LineString([(ub0, BELT / 2), (CORE_E + EAST_GREEN / 2, BELT / 2)]))
     add("MP-JOG", LineString([(nw, vn(nw) - BELT / 2), (n_end + 30, vn(n_end + 30) - BELT / 2)]))
 
     # outer villa rows (front on the loop, gardens on the belt)
-    outer_row(w_leg(BELT)[1] + 2, wadi_west(BELT) - 2, "S")
+    outer_row(w_leg(BELT)[1] + 2, CORE_E - 2, "S")
     g0, g1 = GATE_U - BLVD / 2, GATE_U + BLVD / 2
     nu0 = NU0  # first ~45 m behind the cross road stays a tree screen facing the towers
     outer_row(nu0, g0 - 14, "N")
@@ -400,9 +387,10 @@ def build():
         run(SEQ[key], u0, band)
         BANDS[key] = {k: COUNT[k] - c0[k] for k in COUNT}
 
-    # ================= WADI + EAST TAIL ==========================================================
-    add("MP-WADI-PARK", WADI_PARK, "حديقة الوادي")
-    add("MP-WATER", SITE.intersection(WADI_LINE.buffer(5)), "المجرى المائي")
+    # ================= EAST ZONE ===================================================================
+    eg = SITE.intersection(rect(CORE_E, 0, EAST0, 400)).difference(s_leg)
+    add("MP-GREEN", eg, "ممر أخضر")
+    add("MP-JOG", LineString([(CORE_E + EAST_GREEN / 2, BELT / 2), (CORE_E + EAST_GREEN / 2, vn(CORE_E) - BELT / 2)]))
     # utilities in the low south-east corner, own service gate on the south road
     service("MP-SERVICE-UTIL", tail.intersection(rect(t0 + 8, 0, t0 + 56, 56)), "تحلية ومعالجة مياه", 2500,
             rect(t0 + 14, 12, t0 + 50, 42))
@@ -410,33 +398,33 @@ def build():
             rect(t0 + 66, 12, t0 + 94, 42))
     service("MP-SERVICE-UTIL", tail.intersection(rect(t0 + 104, 0, 900, 56)), "مجاري وخزن أمطار", 1500)
     add("MP-GATE", LineString([(t0 + 50, 0.5), (t0 + 62, 0.5)]), "بوابة خدمة")
-    # primary school and the social club across the bridge, overlooking the wadi park
+    # primary school and the social club at the east end of the park
     sch = tail.intersection(rect(0, 64, 900, 120))
     service("MP-SERVICE-EDU", sch, "مدرسة ابتدائية", 7700, rect(t0 + 30, 88, t0 + 96, 114))
     add("MP-ROAD-LOCAL", tail.intersection(rect(t0 - 4, 56, 900, 64)))
     add("MP-ROAD-LOCAL", tail.intersection(rect(t0 - 4, S_LEG[0], t0 + 6, 124)))
-    # jogging loop closes along the west bank of the wadi
-    bank = WADI_LINE.parallel_offset(WADI_HALF - 6, "left").intersection(rect(0, BELT / 2, 900, n_leg(660)[1] + OUTER))
-    add("MP-JOG", bank)
     club = tail.intersection(rect(t0 + 4, 120, 900, 400))
     service("MP-SERVICE-COMM", club, "النادي الاجتماعي", 4000, rect(t0 + 50, 128, t0 + 100, 150))
     add("MP-WATER", rect(t0 + 30, 152, t0 + 60, 164), "مسبح")
     add("MP-PARK", tail.difference(rect(0, 0, 900, 400)), "")
 
     # ---- the park = everything left inside the core ----
-    core = Polygon([(w_leg(S_LEG[1])[1], S_LEG[1]), (900, S_LEG[1]), (900, n_leg(900)[0]),
+    core = Polygon([(w_leg(S_LEG[1])[1], S_LEG[1]), (CORE_E, S_LEG[1]), (CORE_E, n_leg(CORE_E)[0]),
                     (w_leg(n_leg(140)[0])[1], n_leg(w_leg(200)[1])[0])]).intersection(SITE)
     taken = unary_union([g for lay, g, _ in F if not isinstance(g, LineString)
                          and lay not in ("MP-BOUNDARY", "MP-WATER", "MP-PLAZA") and g.area > 0])
-    park = core.difference(taken).difference(WADI_PARK).buffer(-0.01).buffer(0.01)
+    park = core.difference(taken).buffer(-0.01).buffer(0.01)
     park = unary_union([g for g in getattr(park, "geoms", [park]) if g.area > 400])
     add("MP-PARK", park, "الحديقة المتصلة")
-    # stream along the park, cascading at the plaza, down to the wadi
-    us = np.arange(170, wadi_west(90) + 6, 8)
+    # stream along the park, cascading at the plaza, ending in a rain pond
+    pond_c = (CORE_E - 34, (p_s(CORE_E - 34) + p_n(CORE_E - 34)) / 2)
+    add("MP-WATER", Polygon([(pond_c[0] + 24 * math.cos(a), pond_c[1] + 13 * math.sin(a) + 3 * math.sin(3 * a))
+                              for a in np.linspace(0, 2 * math.pi, 40)]), "بحيرة تجميع الأمطار")
+    us = np.arange(170, pond_c[0] - 20, 8)
     add("MP-WATER-CHANNEL", LineString([(u, (p_s(u) + p_n(u)) / 2 + 4 * math.sin(u / 30)) for u in us]))
     for edge in (p_s, p_n):
         sgn = 6 if edge is p_s else -6
-        for seg in ((172, PLAZA[0] - 4), (PLAZA[1] + 4, wadi_west(90) - 4)):
+        for seg in ((172, PLAZA[0] - 4), (PLAZA[1] + 4, pond_c[0] - 30)):
             add("MP-PATH-PARK", LineString([(u, edge(u) + sgn) for u in np.arange(seg[0], seg[1], 6)]))
     for t in TREES:
         add("MP-TREES-EXIST", Point(t).buffer(4), "شجرة قائمة")

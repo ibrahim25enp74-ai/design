@@ -163,7 +163,7 @@ EXTRA_NOTES = [  # (text, u, v, height)
     ("إصبع أخضر 20 م بقناة أمطار", 264, 150, 2.2),
     ("ممر أخضر 6 م خلف الحدائق", 210, 168, 2.0),
     ("زقاق مغلق 7 م ينتهي على الحديقة", 330, 70, 2.0),
-    ("مجرى الحديقة يصب في الوادي", 580, 104, 2.4),
+    ("مجرى الحديقة ينتهي ببحيرة الأمطار", 580, 104, 2.4),
     ("الشارع الوحيد الذي يعبر الحديقة", 520, 120, 2.2),
     ("ستارة أشجار - البرجان لا يطلان على أي بيت", 165, 238, 2.2),
 ]
@@ -182,6 +182,9 @@ def write_dxf(path, table_rows, summary):
     for name in ("TREES_APPROX",):
         if name in doc.layers:
             doc.layers.get(name).off()
+    # the client asked to ignore the watercourse: drop its trace from the base drawing
+    for e in list(msp.query('*[layer=="WATER_APPROX"]')):
+        msp.delete_entity(e)
 
     for lay, g, lab in L.F:
         for ln in lines(g):
