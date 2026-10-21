@@ -364,7 +364,7 @@ def build():
     add("MP-WATER-CHANNEL", LineString([(GATE_U, vn(GATE_U) - 14), (GATE_U, p_n(GATE_U))]))
     add("MP-SERVICE-PUBLIC", along_north(g0 - 14, g0, 0, OUTER), "إدارة وأمن")
     add("MP-SERVICE-PUBLIC", along_north(g1, g1 + 14, 0, OUTER), "حرس البوابة")
-    AREAS["إدارة وأمن البوابات"] = (2 * 14 * OUTER, 1500)
+    AREAS["إدارة وأمن البوابات"] = (2 * 14 * OUTER, None)
     add("MP-GATE", LineString([(g0, vn(g0) - 1), (g1, vn(g1) - 1)]), "البوابة الرئيسية")
 
     # plaza with waterfalls: the only place a car crosses the park
@@ -403,13 +403,13 @@ def build():
     # ================= EAST END: utilities + second gate on the south road ========================
     service("MP-SERVICE-UTIL", rect(UT0, 0, UT0 + 30, 34), "محطة ماء", 1000, rect(UT0 + 4, 6, UT0 + 26, 24))
     service("MP-SERVICE-UTIL", rect(UT0 + 32, 0, UT0 + 62, 34), "محطة كهرباء", 1000, rect(UT0 + 36, 6, UT0 + 58, 24))
-    service("MP-SERVICE-UTIL", rect(UT0 + 44, 34, UT0 + 62, 50), "نفايات", 300)
+    service("MP-SERVICE-UTIL", rect(UT0 + 62, 0, UT0 + 71, 34), "نفايات", 300)
     add("MP-GATE", LineString([(t0, 0.5), (t0 + 12, 0.5)]), "البوابة الثانوية والخدمة")
     add("MP-ROAD-LOOP", rect(t0, 0, t0 + 12, S_LEG[0]))
     # jogging loop closes round the east end of the park
     add("MP-JOG", LineString([(t0 - 4, BELT / 2), (t0 - 4, S_LEG[0] - 2)]))
-    add("MP-JOG", LineString([(t0 + 16, S_LEG[0] - 2), (EB + LEG + 2 * VILLA["d"] + 4, S_LEG[1] + 2),
-                              (EB + LEG + 2 * VILLA["d"] + 4, vn(EB + 60) - BELT - 2), (n_end + 30, vn(n_end + 30) - BELT / 2)]))
+    add("MP-JOG", LineString([(t0 - 4, S_LEG[0] - 2), (t0 - 4, S_LEG[1] + 3), (EB - VILLA["d"] - 6, 70),
+                              (EB - VILLA["d"] - 6, 112)]))
     # villas on both sides of the east connector
     n_w = int((n_leg(EB)[0] - S_LEG[1]) // VILLA["f"])
     for i in range(n_w):

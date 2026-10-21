@@ -29,7 +29,7 @@ from matplotlib.patches import Polygon as MplPolygon  # noqa: E402
 HERE = os.path.dirname(os.path.abspath(__file__))
 SITE_DXF = sys.argv[1] if len(sys.argv) > 1 else "/mnt/project-files/shallalat/site/SHALLALAT_SITE_PLAN.dxf"
 OUT_DIR = sys.argv[2] if len(sys.argv) > 2 else os.path.join(HERE, "out")
-NAME = "SHALLALAT_MASTERPLAN_C_GREEN_VALLEY"
+NAME = "SHALLALAT_MASTERPLAN_C_GREEN_VALLEY_R2"
 FONT_DIR = os.environ.get("AR_FONT_DIR", os.path.join(HERE, "fonts"))
 
 # layer: (ACI colour, lineweight, hatch RGB or None, preview fill)
@@ -84,8 +84,8 @@ LINE_STYLE = {"MP-ROAD-CL": ("#888888", 0.3, (0, (8, 4))), "MP-WATER-CHANNEL": (
 # --- land use ---------------------------------------------------------------------------------------
 CATS = [  # (name, layers) in precedence order
     ("فلل 400 م²", ["MP-PLOT-VILLA"]),
-    ("دور 200 م²", ["MP-PLOT-HOUSE"]),
-    ("منطقة البرجين", ["MP-TOWER-ZONE"]),
+    ("دور 240 م²", ["MP-PLOT-HOUSE"]),
+    ("ساحة الأبراج", ["MP-TOWER-ZONE"]),
     ("الخدمات العامة والتعليمية والتجارية والبنى التحتية",
      ["MP-SERVICE-PUBLIC", "MP-SERVICE-EDU", "MP-SERVICE-COMM", "MP-SERVICE-MOSQUE", "MP-SERVICE-UTIL"]),
     ("الشوارع والمواقف والساحة", ["MP-ROAD-PUBLIC", "MP-ROAD-LOOP", "MP-ROAD-ENTRY", "MP-ROAD-LOCAL",
@@ -136,7 +136,7 @@ def ar(s):
 
 
 TEXT_ROT = L.ROT_DEG  # labels run along the plot's long axis
-BIG = {"الحديقة المتصلة": 9, "حديقة الوادي": 6, "منطقة البرجين": 6, "ساحة الشلالات": 4.5,
+BIG = {"الحديقة المتصلة": 9, "حديقة الوادي": 6, "ساحة الأبراج + سرداب ~360 سيارة": 5, "ساحة الشلالات": 4.5,
        "الحلقة التجميعية 12 م": 3.5, "حزام أخضر ومسار جري": 3, "شارع الدخول 24 م": 3.5}
 SKIP_LABEL = {"شجرة قائمة", "", None}
 
@@ -165,7 +165,7 @@ EXTRA_NOTES = [  # (text, u, v, height)
     ("زقاق مغلق 7 م ينتهي على الحديقة", 330, 70, 2.0),
     ("مجرى الحديقة ينتهي ببحيرة الأمطار", 580, 104, 2.4),
     ("الشارع الوحيد الذي يعبر الحديقة", 520, 120, 2.2),
-    ("ستارة أشجار - البرجان لا يطلان على أي بيت", 165, 238, 2.2),
+    ("الأبراج لا تطل على أي بيت", 150, 236, 2.2),
 ]
 
 
@@ -224,7 +224,7 @@ def write_dxf(path, table_rows, summary):
     # title + land use table, east of the plot
     x0, y0 = 339960.0, 4035700.0
     rows = [f"{NAME}", "المقترح ج - الوادي الأخضر  |  مجمع الشلالات السكني - القطعة 157 م53 بايبوخت",
-            "مخطط عام - مرحلة المقترحات - UTM 38S - المقياس 1:1000 على A1", ""]
+            "مخطط عام - النسخة R2 وفق البرنامج الجديد - UTM 38S - المقياس 1:1000 على A1", ""]
     rows += summary + ["", "استعمالات الأرض:"]
     rows += [f"{n}:  {a:,.0f} م²  ({a / L.SITE.area * 100:.1f}%)" for n, a in table_rows]
     rows += [f"المجموع:  {L.SITE.area:,.0f} م²", "", "الخدمات (المرسوم / البرنامج م²):"]
@@ -307,8 +307,8 @@ def preview(pdf, png, table_rows, summary):
         for i, r in enumerate(col):
             tx.text(x, 1 - i * 0.085, ar(r), fontsize=13 if i else 15, ha="right", va="top",
                     fontweight="bold" if i == 0 else "normal", transform=tx.transAxes)
-    leg = [("MP-PLOT-VILLA", "فيلا 400 م²"), ("MP-PLOT-HOUSE", "دار 200 م²"), ("MP-TOWER", "برج 20 طابق"),
-           ("MP-SERVICE-EDU", "تعليم"), ("MP-SERVICE-PUBLIC", "خدمات عامة"), ("MP-SERVICE-COMM", "تجاري ونادي"),
+    leg = [("MP-PLOT-VILLA", "فيلا 400 م²"), ("MP-PLOT-HOUSE", "دار 240 م²"), ("MP-TOWER", "برج 20 طابق"),
+           ("MP-SERVICE-EDU", "تعليم"), ("MP-SERVICE-PUBLIC", "خدمات عامة"), ("MP-SERVICE-COMM", "تجاري"),
            ("MP-SERVICE-UTIL", "بنى تحتية"), ("MP-PARK", "حديقة"), ("MP-GREEN-FINGER", "إصبع أخضر"),
            ("MP-GREEN-BELT", "حزام أخضر"), ("MP-WATER", "ماء"), ("MP-ROAD-LOOP", "شوارع")]
     for i, (lay, t) in enumerate(leg):
@@ -327,16 +327,17 @@ def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     table = land_use()
     nv, nh = L.COUNT["villa"], L.COUNT["house"]
-    apts = 2 * 19 * 4
+    apts = 3 * 20 * 4
     green = dict(table)["الحدائق والمساحات الخضراء والممرات"]
     summary = [
         "البرنامج",
         f"فلل 400 م²: {nv}",
-        f"دور 200 م²: {nh}",
-        f"شقق البرجين: {apts} (2 برج × 19 طابقاً سكنياً × 4)",
+        f"دور 240 م²: {nh}",
+        f"شقق الأبراج: {apts} (3 أبراج × 20 طابقاً × 4)",
         f"المجموع: {nv + nh + apts} وحدة",
         f"السكان التقريبي: {(nv + nh) * 6 + apts // 2 * 4 + apts // 2 * 6:,} نسمة",
         f"الخضرة: {green / L.SITE.area * 100:.0f}% من القطعة",
+        f"الشوارع والمواقف: {dict(table)['الشوارع والمواقف والساحة'] / L.SITE.area * 100:.0f}% من القطعة",
         "كل بيت يطل من الخلف على خضرة",
     ]
     write_dxf(os.path.join(OUT_DIR, NAME + ".dxf"), table, summary)
