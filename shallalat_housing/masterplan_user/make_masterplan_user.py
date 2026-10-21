@@ -96,6 +96,7 @@ def write_dxf(path):
     for g in STRIPS:
         hatch(g, "MP_HATCH_GREEN", FILL["lawn"])
     hatch(ROUNDABOUT_ISLAND, "MP_HATCH_GREEN", FILL["green"])
+    hatch(MINI_ISLAND, "MP_HATCH_GREEN", FILL["green"])
     for g in [BIG_PARK] + GARDENS:
         hatch(g, "MP_HATCH_GREEN", FILL["park"])
     hatch(OPEN["PARK_MALL"], "MP_HATCH_ROAD", FILL["parking"])
@@ -113,6 +114,8 @@ def write_dxf(path):
     outline(SITE_RAW, "MP_BOUNDARY_COORDS")
     outline(ROADS, "MP_ROADS")
     msp.add_circle(utm(RB_C), RB_R, dxfattribs={"layer": "MP_ROADS"})
+    msp.add_circle(utm(MRB_C), MRB_R, dxfattribs={"layer": "MP_ROADS"})
+    outline(MINI_ISLAND, "MP_GREEN")
     for p in VILLAS:
         outline(p, "MP_PLOT_VILLA")
     for p in HOUSES:
@@ -221,6 +224,8 @@ def write_preview(png, pdf):
     for g in STRIPS:
         f(g, "lawn", ec="#3a6a2a", lw=0.4)
     f(ROUNDABOUT_ISLAND, "green", ec="none")
+    f(MINI_ISLAND, "green", ec="none", z=2)
+    ax.add_patch(plt.Circle(MRB_C, MRB_R, fc="none", ec="#888", lw=0.5, ls="--", zorder=2))
     for g in [BIG_PARK] + GARDENS:
         f(g, "park", ec="#3a6a2a", lw=0.4)
     f(OPEN["PARK_MALL"], "parking", ec="#555", lw=0.4)

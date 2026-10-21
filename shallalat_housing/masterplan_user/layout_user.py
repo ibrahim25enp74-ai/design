@@ -96,9 +96,16 @@ for p in STRIPS:
         _strips.append(_widen(p, 0.0))
     elif p.area > 600:                                   # the two halves of the house strip
         _strips.append(_widen(p, 0.0))
-    else:                                                # island of the small roundabout, stays centred
-        _strips.append(_mv(p, -STRIP_GROW / 2))
+    # the sketch's small oval island is replaced by a proper roundabout below
 STRIPS = _strips
+# small roundabout where the spine crosses the house strip: round island, the two strip halves
+# set back on an arc around it, like the main roundabout
+_hs = [p for p in STRIPS if p.centroid.x > 600]
+MRB_C = ((min(p.bounds[0] for p in _hs) + max(p.bounds[2] for p in _hs)) / 2,
+         (min(p.bounds[3] for p in _hs if p.centroid.y < 96) + max(p.bounds[1] for p in _hs if p.centroid.y > 96)) / 2)
+MRB_R, MRB_ISL = 17.0, 9.0
+MINI_ISLAND = Point(MRB_C).buffer(MRB_ISL)
+STRIPS = [p.difference(Point(MRB_C).buffer(MRB_R + 9.0)) if p.centroid.x > 600 else p for p in STRIPS]
 PINK = PINK.intersection(box(-1e3, -1e3, PINK.bounds[2] - 2 * STRIP_GROW, 1e3))
 for k in ("EN", "ES"):
     RED[k] = RED[k].intersection(box(-1e3, -1e3, EAST_SERV_EDGE, 1e3))
@@ -109,7 +116,7 @@ RB_R, RB_ISL = 24.0, 12.0
 ROUNDABOUT_ISLAND = Point(RB_C).buffer(RB_ISL)
 
 BUILT = unary_union(VILLAS + HOUSES + STRIPS + TOWERS + [PLAZA, PINK] + list(RED.values()))
-ROADS = SITE.difference(BUILT).difference(ROUNDABOUT_ISLAND)
+ROADS = SITE.difference(BUILT).difference(ROUNDABOUT_ISLAND).difference(MINI_ISLAND)
 
 # --- splitting a zone into parcels of a set area -----------------------------------------------------
 
@@ -235,7 +242,7 @@ def total(gs):
 
 
 GARDENS = [OPEN[k] for k in OPEN if k.startswith("G_")]
-GREEN = STRIPS + [BIG_PARK, ROUNDABOUT_ISLAND] + GARDENS
+GREEN = STRIPS + [BIG_PARK, ROUNDABOUT_ISLAND, MINI_ISLAND] + GARDENS
 LANDUSE = [
     (f"Villas 400 m2 ({len(VILLAS)}) - فلل 400 م2", total(VILLAS)),
     (f"Houses 240 m2 ({len(HOUSES)}) - دور 240 م2", total(HOUSES)),
