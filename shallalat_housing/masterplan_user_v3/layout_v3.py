@@ -147,6 +147,9 @@ WEST = SITE.intersection(box(-100, -10, ENTRY[0], 400))
 N_BLOCK = WEST.intersection(box(-100, SPINE[1], ENTRY[0], 400))
 SW_BLOCK = WEST.intersection(box(-100, -10, SROAD[0], SPINE[0]))
 SE_BLOCK = WEST.intersection(box(SROAD[1], -10, ENTRY[0], SPINE[0]))
+# rev 1: a school drop-off lay-by along the entry road, so parents stop off the through lane
+LAYBY = (ENTRY[0] - 7.0, 20.0, ENTRY[0], SPINE[0] - 6.0)
+SE_BLOCK = SE_BLOCK.difference(box(*LAYBY))
 
 
 def clean(g):
@@ -183,18 +186,18 @@ SERV, OPEN = {}, {}
 HUB_MID = 75.0
 NE_BLOCK = N_BLOCK.intersection(box(HUB_MID, -10, 1e3, 400))
 NW_BLOCK = N_BLOCK.intersection(box(-100, -10, HUB_MID, 400))
-# north-east, at the gate: mosque and health centre on the civic street by the roundabout,
+# north-east, at the gate: health centre on the civic street by the roundabout with a civic garden,
 # the mall facing the entry road with its parking, a gate square between them
+# (rev 1: mosque, kindergarten and primary school moved to the park beside the towers, the heart of the plan)
 low, up = cut(NE_BLOCK, 3000, "v", "min")
-SERV["MOSQUE"], SERV["HEALTH"] = cut(low, 2000, "u", "max")
+SERV["HEALTH"], OPEN["G_CIVIC"] = cut(low, 1000, "u", "max")
 OPEN["PARK_MALL"], r = cut(up, 1600, "u", "max")
 SERV["MALL"], OPEN["G_PLAZA"] = cut(r, 3000, "u", "max")
-# north-west: club + sports fields and the kindergarten on the civic street, a quiet garden behind them
-low, OPEN["G_WEST"] = cut(NW_BLOCK, 6500, "v", "min")
-SERV["KG"], SERV["CLUB"] = cut(low, 1500, "u", "max")
+# north-west: the club was dropped from the programme (rev 1); the whole block is the west garden
+OPEN["G_WEST"] = clean(NW_BLOCK)
 # south-east: primary school on the civic street, secondary school on the south side, a garden between
-SERV["PRIMARY"], r = cut(SE_BLOCK, 3000, "v", "max")
-SERV["SECONDARY"], OPEN["G_SCHOOL"] = cut(r, 5000, "v", "min")
+# (rev 1: the primary school moved to the park beside the towers)
+SERV["SECONDARY"], OPEN["G_SCHOOL"] = cut(SE_BLOCK, 5000, "v", "min")
 # south-west, by the service gate: utilities, police and civil defence in a row along the service street,
 # a buffer garden behind them
 row, OPEN["G_UTIL"] = cut(SW_BLOCK, 3500, "u", "max")
@@ -215,7 +218,19 @@ TOWERS = [box(x - TOWER_SIDE / 2, _vc - TOWER_SIDE / 2, x + TOWER_SIDE / 2, _vc 
           for x in (_tc - 44.0, _tc, _tc + 44.0)]
 # towers diagonal-staggered so every flat looks along the park
 TOWERS = [box(t.bounds[0], t.bounds[1] + dv, t.bounds[2], t.bounds[3] + dv) for t, dv in zip(TOWERS, (14, -14, 14))]
-PLAZA_ALL = box(_tc - 78.0, _vc - 46.0, _tc + 78.0, _vc + 46.0).intersection(PARK_ALL)
+PLAZA_ALL = box(_tc - 78.0, _vc - 42.0, _tc + 78.0, _vc + 42.0).intersection(PARK_ALL)
+PLAZA = PLAZA_ALL.difference(unary_union(TOWERS))
+
+# rev 1: kindergarten, primary school and mosque in the park round the towers' plaza, each on a loop street
+# and a drop-off lane, so the daily walks of every home are short and stay inside the park
+_south = PARK_ALL.intersection(box(_tc - 70.0, -10, _tc - 9.0, PLAZA_ALL.bounds[1]))
+SERV["KG"], _ = cut(_south, 1500, "u", "max")
+_north = PARK_ALL.intersection(box(_tc - 150.0, PLAZA_ALL.bounds[3] - 6.0, _tc - 9.0, 400))
+SERV["PRIMARY"], _ = cut(_north, 3000, "u", "max")
+_south_e = PARK_ALL.intersection(box(_tc + 9.0, -10, _tc + 78.0, PLAZA_ALL.bounds[1]))
+SERV["MOSQUE"], _ = cut(_south_e, 2000, "u", "min")
+PARK_ALL = PARK_ALL.difference(SERV["KG"]).difference(SERV["MOSQUE"]).difference(SERV["PRIMARY"])
+PLAZA_ALL = PLAZA_ALL.difference(SERV["PRIMARY"])
 PLAZA = PLAZA_ALL.difference(unary_union(TOWERS))
 
 # drop-off lanes from both loops into the plaza ends (the only park crossings for cars)
@@ -232,6 +247,9 @@ GARDEN_ROOMS = polys(PARK.difference(unary_union(WALKS)))
 GARDEN_ROOMS = [g for g in GARDEN_ROOMS if g.area > 300]
 EAST_GARDEN = max(GARDEN_ROOMS, key=lambda g: g.centroid.x)
 WALKS = [w for w in WALKS if not w.is_empty]
+# rev 1: emergency link (grass-crete, bollards) across the east garden joins the two loops into one ring
+EMERG_U = HOU_END + 12.0
+EMERG = box(EMERG_U - 2.5, -10, EMERG_U + 2.5, 400).intersection(EAST_GARDEN)
 
 ROADS = SITE.difference(unary_union(VILLAS + HOUSES + list(SERV.values()) + list(OPEN.values())
                                     + [PARK_ALL, ROUNDABOUT_ISLAND] + LINKS))
