@@ -62,7 +62,6 @@ def cross_strip(a, b, y0=-60, y1=380):
 
 
 CROSS_W = 12.0
-WC = LineString([(752, 380), (748, 314), (747, 253), (745, 187), (737, 112), (719, 53), (716, -8), (740, -93)])
 TREES_EXIST = [(93, 225), (80, 158), (94, 95), (132, 236), (124, 171), (135, 105), (109, 55)]
 
 # ---------------------------------------------------------------- design parameters
@@ -91,11 +90,11 @@ main_roads = clip(unary_union([boulevard, turning, rb_outer, gate_street])).diff
 service_street = clip(box(SERVICE_X[0], 0, SERVICE_X[1], 400)).difference(main_roads)
 west_street = clip(cross_strip(10, 22, 70, 380))  # skewed local street along the cross-road buffer
 
-# ---------------------------------------------------------------- valley / Shallalat garden
-valley_garden = clip(unary_union([WC.buffer(28), Point(738, 148).buffer(48)]))
-valley_free = valley_garden.difference(main_roads)
-lake = Polygon([(720, 120), (738, 110), (756, 122), (760, 150), (748, 172), (728, 170), (716, 150)]).buffer(2)
-x_valley_w = lambda y: valley_garden.bounds[0]
+# ---------------------------------------------------------------- Shallalat garden
+# the watercourse is ignored (client, 2026-10-21): the land is continuous and the garden with its cascades
+# and lake closes the axis on the south side of the boulevard at the east end
+shallalat_garden = clip(box(736, S0, 848, 400))
+lake = affinity.translate(Polygon([(720, 120), (738, 110), (756, 122), (760, 150), (748, 172), (728, 170), (716, 150)]), 54, -4).buffer(2).intersection(shallalat_garden.buffer(-6))
 
 # ---------------------------------------------------------------- west part (public, west of the cross road)
 west_part = clip(cross_strip(-1000, -CROSS_W / 2 - 4))
@@ -133,10 +132,9 @@ CONN = {  # 12 m connectors linking local streets to the boulevard ("blocks ever
     "S1": box(350, Y_BLVD[1], 362, 400),
     "S2": box(550, Y_BLVD[1], 562, 400),
     "S3": box(640, Y_BLVD[1], 652, 400),
-    "E1": box(806, 31, 818, Y_BLVD[0]),
-    "E2": box(790, Y_BLVD[1], 802, 400),
+    "N3": box(752, 31, 764, Y_BLVD[0]),
 }
-reserved = unary_union([cross_row, cross_buffer, west_part, main_roads, service_street, west_street, valley_garden,
+reserved = unary_union([cross_row, cross_buffer, west_part, main_roads, service_street, west_street, shallalat_garden,
                         gate_admin, market, mosque, kg, primary, intermediate, preparatory, substation,
                         utilities.buffer(18, join_style=2), north_buffer])
 
@@ -153,11 +151,10 @@ H_S_ROWS = [(S0, S0 + 20, 0), (S0 + 32, S0 + 52, 0), (S0 + 52, S0 + 72, 1), (S0 
 
 ZONES = {
     "N-W": (box(GATE_X + 12, 6, 392, 68), "V", N_STREETS, V_N_ROWS, ["N1"]),
-    "N-E": (box(512, 6, 712, 68), "V", N_STREETS, V_N_ROWS, ["N2"]),
+    "N-E": (box(512, 6, 700, 68), "V", N_STREETS, V_N_ROWS, ["N2"]),
+    "N-F": (box(700, 6, 856, 68), "H", N_STREETS, H_N_ROWS, ["N3"]),
     "S-W": (box(150, S0, 350, 400), "V", V_S_STREETS, V_S_ROWS, ["S1"]),
-    "S-E": (box(562, S0, 760, 400), "H", H_S_STREETS, H_S_ROWS, ["S2", "S3"]),
-    "E-N": (box(725, 6, 856, 68), "H", N_STREETS, H_N_ROWS, ["E1"]),
-    "E-S": (box(760, S0, 860, 400), "H", H_S_STREETS, H_S_ROWS, ["E2"]),
+    "S-E": (box(562, S0, 736, 400), "H", H_S_STREETS, H_S_ROWS, ["S2", "S3"]),
 }
 
 plots = {"V": [], "H": []}
@@ -219,13 +216,13 @@ if sw_streets:
 local_streets = [s for s in local_streets if not s.is_empty]
 connectors = [c.difference(main_roads) for c in connectors]
 
-# turning heads at the dead ends of local streets that stop at the valley garden
+# turning heads at the dead ends of local streets that stop at the garden or the substation
 turn_heads = []
 for s in local_streets:
     x1 = s.bounds[2]
-    if valley_garden.distance(box(x1 - 1, s.bounds[1], x1, s.bounds[3])) < 3:
+    if unary_union([shallalat_garden, substation]).distance(box(x1 - 1, s.bounds[1], x1, s.bounds[3])) < 3:
         turn_heads.append(Point(x1 - 8, (s.bounds[1] + s.bounds[3]) / 2).buffer(9).intersection(SITE).difference(
-            valley_garden))
+            shallalat_garden))
 
 ALL_ROADS = unary_union([main_roads, service_street, west_street, cross_row, tower_drive, west_road]
                         + local_streets + connectors + turn_heads)
@@ -248,7 +245,7 @@ public_garden = public_garden.difference(sports)
 
 
 playgrounds = [box(296, 229, 344, 246).intersection(orchard), box(604, 187, 640, 201).intersection(se_wedge),
-               box(691, 10, 709, 44).intersection(valley_free)]
+               box(818, 104, 846, 124).intersection(shallalat_garden)]
 
 SERVICES = {
     "POLICE": ("مركز شرطة", police, 1200),
@@ -272,6 +269,6 @@ if __name__ == "__main__":
     print("villas", len(plots["V"]), "houses", len(plots["H"]))
     for k, (ar, g, need) in SERVICES.items():
         print(f"{k:22s} {g.area:8.0f} need {need}")
-    print("tower zone", tower_zone.area, "west part", west_part.area, "valley", valley_garden.area, "orchard", orchard.area)
+    print("tower zone", tower_zone.area, "west part", west_part.area, "garden", shallalat_garden.area, "orchard", orchard.area)
     for z, p in zone_polys.items():
         print(z, round(p.area))

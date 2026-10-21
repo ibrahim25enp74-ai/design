@@ -51,7 +51,7 @@ CATS = [  # key, english, arabic, geometry, group
 for k, (ar, g, _need) in L.SERVICES.items():
     CATS.append(("S:" + k, k.title(), ar, g, "SRV"))
 CATS += [
-    ("G1", "Shallalat valley garden", "حديقة الشلالات (الوادي)", L.valley_garden, "GRN"),
+    ("G1", "Shallalat garden (cascades + lake)", "حديقة الشلالات (شلالات وبحيرة)", L.shallalat_garden, "GRN"),
     ("G2", "Orchard garden", "حديقة البستان", L.orchard, "GRN"),
     ("G3", "Public garden (west)", "الحديقة العامة (الغرب)", L.public_garden, "GRN"),
     ("G4", "Wooded island + medians", "الجزيرة المشجرة والجزرات الوسطية",
@@ -242,29 +242,22 @@ for k, (ar, g, _need) in L.SERVICES.items():
     text(f"{g.area:,.0f} m2", c.x, c.y + h * 2.3, h * 0.75, lay)
 
 # ---- greens, water, play
-for g in (L.valley_garden, L.orchard, L.public_garden, L.rb_island):
+for g in (L.shallalat_garden, L.orchard, L.public_garden, L.rb_island):
     outline(g, "MP_GREEN_PARK")
-fill(unary_union([L.valley_garden, L.orchard, L.public_garden, L.rb_island]), "MP_HATCH_GREEN", 83, 0.55)
+fill(unary_union([L.shallalat_garden, L.orchard, L.public_garden, L.rb_island]), "MP_HATCH_GREEN", 83, 0.55)
 outline(unary_union([L.gate_median, L.blvd_median, residual]), "MP_GREEN_BUFFER")
 fill(unary_union([L.gate_median, L.blvd_median, residual]), "MP_HATCH_GREEN", 63, 0.75)
 for g in L.playgrounds:
     outline(g, "MP_PLAY")
     c = g.centroid
     label2("PLAYGROUND", "ملعب أطفال", c.x, c.y, 1.9, "MP_PLAY")
-wc_in = L.WC.intersection(L.SITE.buffer(40))
-msp.add_spline([L.utm_xy(*p) for p in wc_in.coords], dxfattribs={"layer": "MP_WATER"})
 outline(L.lake, "MP_WATER")
 fill(L.lake, "MP_HATCH_WATER", 141, 0.3)
 for k in range(5):  # cascades (the "Shallalat") stepping down to the lake
     y = 104 - k * 2.2
-    line([(733 - 6 + k, y), (733 + 6 - k, y)], "MP_WATER")
-# bridges where the boulevard crosses the valley
-for y in L.Y_BLVD:
-    line([(L.WC.interpolate(L.WC.project(Point(735, y))).x - 18, y), (L.WC.interpolate(L.WC.project(Point(735, y))).x + 18, y)],
-         "MP_WATER")
-label2("SHALLALAT GARDEN - VALLEY PARK", "حديقة الشلالات - متنزه الوادي", 738, 196, 3.6, "MP_GREEN_PARK", ANG + 90)
-label2("CASCADES + LAKE", "شلالات وبحيرة", 738, 140, 2.6, "MP_WATER")
-text("BRIDGE - جسر", 720, 86, 2.2, "MP_WATER")
+    line([(787 - 6 + k, y), (787 + 6 - k, y)], "MP_WATER")
+label2("SHALLALAT GARDEN", "حديقة الشلالات", 792, 162, 3.6, "MP_GREEN_PARK")
+label2("CASCADES + LAKE", "شلالات وبحيرة", 792, 138, 2.6, "MP_WATER")
 label2("ORCHARD GARDEN", "حديقة البستان", 318, 255, 3.0, "MP_GREEN_PARK")
 label2("PUBLIC GARDEN", "حديقة عامة", 70, 280, 3.0, "MP_GREEN_PARK")
 label2("WOODED ISLAND", "الجزيرة المشجرة", L.RB_C[0], L.RB_C[1], 2.2, "MP_GREEN_PARK")
@@ -282,16 +275,16 @@ for x in np.arange(6, 900, 9):
 for x in np.arange(150, 360, 8):
     for y in np.arange(200, 300, 8):
         tree_pts.append((x, y))
-gx, gy = np.meshgrid(np.arange(660, 800, 11), np.arange(-5, 320, 11))
+gx, gy = np.meshgrid(np.arange(738, 850, 11), np.arange(100, 200, 11))
 tree_pts += list(zip(gx.ravel() + (gy.ravel() % 22) / 2, gy.ravel()))
 gx, gy = np.meshgrid(np.arange(0, 220, 13), np.arange(0, 300, 13))
 tree_pts += list(zip(gx.ravel(), gy.ravel()))
 hold_out = unary_union([roads_main, roads_local, roads_service, roads_west, roads_public, plots_v, plots_h, L.lake.buffer(3),
                         *L.towers, *L.tower_podium, *[g for _, g, _ in L.SERVICES.values()], *L.playgrounds]).buffer(1.5)
-green_ok = unary_union([L.valley_garden, L.orchard, L.public_garden, L.tower_zone, L.blvd_median, residual])
+green_ok = unary_union([L.shallalat_garden, L.orchard, L.public_garden, L.tower_zone, L.blvd_median, residual])
 for p in tree_pts:
     pt = Point(p)
-    if green_ok.contains(pt) and not hold_out.contains(pt) and L.WC.distance(pt) > 5:
+    if green_ok.contains(pt) and not hold_out.contains(pt):
         msp.add_circle(L.utm_xy(*p), 2.5, dxfattribs={"layer": "MP_TREES"})
 
 # ---- gated wall, gates
@@ -460,14 +453,14 @@ summary = [
     "24 m boulevard parallel to the north edge with a wooded median; blocks every ~150 m.",
     "Cross road kept public: west part = 2 towers among the existing trees + public services + club.",
     "Mid-axis 16 m service street: market + mosque to the north, schools to the south.",
-    "Green: wooded island + medians, orchard garden, Shallalat garden at the valley.",
-    "Phasing: 1 west part + gate + first blocks, 2 centre (schools, market, mosque), 3 valley + east island.",
+    "Green: wooded island + medians, orchard garden, Shallalat garden closing the axis (watercourse ignored).",
+    "Phasing: 1 west part + gate + first blocks, 2 centre (schools, market, mosque), 3 east end + Shallalat garden.",
     "",
     "KURRASA CHECKS (معايير الإسكان الحضري 2010)",
     "Tower spacing 34 m (>= 33 m) / tower to nearest house > 60 m",
     "Primary 500 m, intermediate/preparatory 800 m, mosque + market 500 m: OK for all plots",
-    "Kindergarten 300 m: OK west of the valley; east-island houses ~420 m (over)",
-    "Approximate layers from the scan: cross road, watercourse, existing trees - confirm by survey.",
+    "Kindergarten 300 m: OK up to x~700; easternmost houses ~420 m (over)",
+    "Approximate from the scan: cross road and existing trees - confirm by survey. Watercourse ignored per client.",
 ]
 for i, s in enumerate(summary):
     msp.add_text(s, height=4.2 if s.isupper() or i == 0 else 3.4,
@@ -504,14 +497,12 @@ fig = plt.figure(figsize=(33.1, 23.4))  # A1
 ax = fig.add_axes([0.02, 0.30, 0.96, 0.62])
 pfill(ax, L.SITE, "#f6f3ea", "none")
 pfill(ax, residual, COL["GREEN2"], "none")
-pfill(ax, unary_union([L.valley_garden, L.orchard, L.public_garden]), COL["GREEN"], "#6d9a52", 0.3)
+pfill(ax, unary_union([L.shallalat_garden, L.orchard, L.public_garden]), COL["GREEN"], "#6d9a52", 0.3)
 pfill(ax, L.tower_zone.difference(roads_west), COL["T"], "#4a7fb0", 0.4)
 pfill(ax, unary_union([roads_main, roads_service, roads_local, roads_west]), COL["ROAD"], "#9a9a9a", 0.3, 2)
 pfill(ax, roads_public, "#c4c4c4", "#888", 0.4, 2)
 pfill(ax, unary_union([L.rb_island, L.gate_median, L.blvd_median]), "#7fb069", "#557a45", 0.3, 3)
 pfill(ax, L.lake, COL["WATER"], "#3d7fb8", 0.4, 3)
-x, y = L.WC.intersection(L.SITE.buffer(5)).xy
-ax.plot(x, y, color="#2f6db0", lw=1.6, zorder=3)
 for p in L.plots["V"]:
     pfill(ax, p, COL["V"], "#8a6d12", 0.35, 4)
 for p in L.plots["H"]:
@@ -531,7 +522,7 @@ for g in L.playgrounds:
     pfill(ax, g, "#ffe08a", "#b08a00", 0.4, 5)
 ex = np.array(L.TREES_EXIST)
 ax.scatter(ex[:, 0], ex[:, 1], s=90, facecolors="none", edgecolors="#2f6b2f", lw=0.8, zorder=6)
-tp = [p for p in tree_pts if green_ok.contains(Point(p)) and not hold_out.contains(Point(p)) and L.WC.distance(Point(p)) > 5]
+tp = [p for p in tree_pts if green_ok.contains(Point(p)) and not hold_out.contains(Point(p))]
 tp = np.array(tp)
 ax.scatter(tp[:, 0], tp[:, 1], s=9, c="#4f8f3a", alpha=0.75, lw=0, zorder=5)
 x, y = L.SITE.exterior.xy
@@ -552,8 +543,8 @@ ptxt(ax, "MAIN GATE", "البوابة الرئيسية", L.GATE_X, -8, 6, color=
 ptxt(ax, "SERVICE GATE", "بوابة خدمية", sum(L.SERVICE_X) / 2, -8, 5, color="#c0392b")
 ptxt(ax, "TOWERS GATE", "بوابة البرجين", 128, 106, 4.5, color="#c0392b")
 ptxt(ax, "WOODED ISLAND", "الجزيرة المشجرة", L.RB_C[0], L.RB_C[1], 4.2)
-ptxt(ax, "SHALLALAT GARDEN", "حديقة الشلالات", 738, 196, 7, -88)
-ptxt(ax, "CASCADES + LAKE", "شلالات وبحيرة", 738, 140, 5)
+ptxt(ax, "SHALLALAT GARDEN", "حديقة الشلالات", 792, 162, 7)
+ptxt(ax, "CASCADES + LAKE", "شلالات وبحيرة", 792, 138, 5)
 ptxt(ax, "ORCHARD GARDEN", "حديقة البستان", 255, 268, 6, -10)
 ptxt(ax, "PUBLIC GARDEN", "حديقة عامة", 70, 282, 6)
 ptxt(ax, "GREEN BELT", "حزام أخضر", 670, 195, 4.5, -10)
@@ -629,11 +620,11 @@ lines = [
     (ar("بوليفارد 24 م موازٍ للحافة الشمالية بجزرة وسطية مشجرة، وأضلاع كل ~150 م. الشارع العرضي يبقى عاماً."), 9, None),
     (ar("الجزء الغربي: البرجان بين الأشجار القائمة + الشرطة والدفاع المدني والمركز الصحي والنادي والتحلية."), 9, None),
     (ar("شارع خدمي 16 م في منتصف المحور: السوق والجامع شمالاً، والمدارس الأربع جنوباً."), 9, None),
-    (ar("المراحل: 1 الجزء الغربي والبوابة والبلوكات الأولى، 2 الوسط (المدارس والسوق والجامع)، 3 الوادي والجزيرة الشرقية."), 9, None),
+    (ar("المراحل: 1 الجزء الغربي والبوابة والبلوكات الأولى، 2 الوسط (المدارس والسوق والجامع)، 3 الطرف الشرقي وحديقة الشلالات."), 9, None),
     ("", 6, None),
     (ar("تدقيق الكراس: المسافة بين البرجين 34 م (الحد الأدنى 33 م). الابتدائية 500 م والمتوسطة والإعدادية 800 م والجامع والسوق 500 م: مطابقة لكل القطع."), 9, None),
-    (ar("الروضة 300 م: مطابقة غرب الوادي، وتتجاوزها دور الجزيرة الشرقية (~420 م)."), 9, None),
-    (ar("الشارع العرضي والمجرى والأشجار القائمة منقولة من الخارطة الممسوحة وتحتاج تأكيداً بالمسح الموقعي."), 9, "italic"),
+    (ar("الروضة 300 م: مطابقة لأغلب القطع، وتتجاوزها الدور في أقصى الشرق (~420 م)."), 9, None),
+    (ar("الشارع العرضي والأشجار القائمة منقولة من الخارطة الممسوحة وتحتاج تأكيداً بالمسح الموقعي."), 9, "italic"),
 ]
 yy = 0.98
 for s, fs, wt in lines:
