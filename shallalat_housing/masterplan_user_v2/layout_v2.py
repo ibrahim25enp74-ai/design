@@ -244,8 +244,9 @@ CIVIC_GARDEN = clean(mid_band.difference(SERV["MOSQUE"]))
 # south: kindergarten and primary school on the quiet south road, their garden between them
 # the kindergarten is split in two of 750 m2 (same total) so no home is more than ~300 m from one:
 # one here for the middle quarters, one at the west end for the towers and quarter 1
-SERV["KG"], sb2 = cut(south_band, 750, "u", "max")
-SERV["PRIMARY"], sb2 = cut(sb2, 3000, "u", "min")
+_sbx = south_band.bounds
+SERV["KG"] = box(_sbx[2] - 27.4, _sbx[1], _sbx[2], _sbx[1] + 750.0 / 27.4)   # square plot on the south road
+SERV["PRIMARY"], sb2 = cut(clean(south_band.difference(SERV["KG"])), 3000, "u", "min")
 OPEN["G_SCHOOL"] = sb2
 
 # --- tower zone at the west end ---------------------------------------------------------------------------
