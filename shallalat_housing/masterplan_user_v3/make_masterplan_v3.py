@@ -12,6 +12,7 @@ from ezdxf.enums import TextEntityAlignment
 
 from layout_v3 import *  # noqa: F401,F403  (geometry of the layout)
 from landscape_v3 import LANDSCAPE, PLAZA_LS
+from circ_v3 import DEST, GROUPS, ROUTES, distances
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROT = math.degrees(math.atan2(U[1], U[0]))
@@ -21,9 +22,9 @@ NAMES = {
     "POLICE": ("POLICE", "الشرطة"), "CIVIL_DEF": ("CIVIL DEFENCE", "الدفاع المدني"), "HEALTH": ("HEALTH CENTRE", "المركز الصحي"),
     "SECONDARY": ("SECONDARY SCHOOL", "الثانوية (متوسطة + إعدادية)"), "PRIMARY": ("PRIMARY SCHOOL", "المدرسة الابتدائية"),
     "KG": ("KINDERGARTEN", "الروضة"), "WATER": ("WATER STATION", "محطة الماء"), "POWER": ("POWER STATION", "محطة الكهرباء"),
-    "WASTE": ("WASTE", "النفايات"), "CLUB": ("SOCIAL CLUB + SPORTS", "النادي والملاعب"),
+    "WASTE": ("WASTE", "النفايات"),
     "PARK_MALL": ("PARKING", "موقف السيارات"), "G_PLAZA": ("GATE SQUARE GARDEN", "حديقة ساحة البوابة"), "G_WEST": ("WEST GARDEN", "الحديقة الغربية"),
-    "G_KG": ("GARDEN", "حديقة"), "G_SCHOOL": ("GARDEN", "حديقة"), "G_UTIL": ("BUFFER GARDEN", "حديقة عازلة"),
+    "G_CIVIC": ("CIVIC GARDEN", "الحديقة المدنية"), "G_SCHOOL": ("SCHOOL GARDEN", "حديقة المدرسة"), "G_UTIL": ("BUFFER GARDEN", "حديقة عازلة"),
 }
 UTIL_KEYS = ("WATER", "POWER", "WASTE")
 
@@ -35,7 +36,7 @@ PARK_LABELS = [(max(GARDEN_ROOMS, key=lambda g: g.area if g is not EAST_GARDEN e
 def table_rows():
     units = len(VILLAS) + len(HOUSES) + N_APTS
     rows = [
-        "VARIANT 3 - THE LINEAR PARK - البديل 3: الحديقة الطولية",
+        "VARIANT 3 - THE LINEAR PARK, REV 1 - البديل 3: الحديقة الطولية، تعديل 1",
         "Plot 157 / District 53 Baybokht - NIC 5/2026 - UTM 38S",
         "",
         f"UNITS: {len(VILLAS)} villas 400 m2 + {len(HOUSES)} houses 240 m2 + {N_APTS} flats = {units}",
@@ -50,13 +51,17 @@ def table_rows():
     return rows
 
 
+CIRC_LAYERS = {"main": "MP_CIRC_MAIN", "loop": "MP_CIRC_LOOP", "drop": "MP_CIRC_DROP", "service": "MP_CIRC_SERVICE",
+               "emergency": "MP_CIRC_EMERG", "ped": "MP_CIRC_PED"}
 LAYERS = {
     "MP_BOUNDARY": (1, 50), "MP_BOUNDARY_COORDS": (6, 18), "MP_GATES": (1, 50), "MP_ROADS": (8, 25),
     "MP_PLOT_VILLA": (30, 18), "MP_PLOT_HOUSE": (40, 18), "MP_TOWERS": (5, 50), "MP_PLAZA": (4, 18),
     "MP_SERVICES": (1, 25), "MP_UTILITIES": (6, 25), "MP_PARKING": (9, 13), "MP_GREEN": (3, 13),
     "MP_TEXT": (7, 18), "MP_TEXT_PLOTNO": (8, 9), "MP_TABLE": (7, 18), "MP_NORTH": (7, 25),
     "MP_HATCH_RES": (31, 0), "MP_HATCH_SERV": (1, 0), "MP_HATCH_GREEN": (3, 0), "MP_HATCH_ROAD": (252, 0),
-    "MP_HATCH_TOWER": (5, 0), "MP_LANDSCAPE": (94, 13), "MP_GARDEN_PATH": (41, 13), "MP_GARDEN_BEDS": (84, 13), "MP_TREES": (3, 13), "MP_HATCH_LANDSCAPE": (94, 0),
+    "MP_HATCH_TOWER": (5, 0), "MP_EMERGENCY_LINK": (1, 25),
+    "MP_CIRC_MAIN": (1, 70), "MP_CIRC_LOOP": (30, 50), "MP_CIRC_DROP": (5, 35), "MP_CIRC_SERVICE": (6, 50),
+    "MP_CIRC_EMERG": (1, 35), "MP_CIRC_PED": (3, 35), "MP_LANDSCAPE": (94, 13), "MP_GARDEN_PATH": (41, 13), "MP_GARDEN_BEDS": (84, 13), "MP_TREES": (3, 13), "MP_HATCH_LANDSCAPE": (94, 0),
 }
 # the architect's own colours
 FILL = {
@@ -117,6 +122,12 @@ def write_dxf(path):
     for k, g in SERV.items():
         hatch(g, "MP_HATCH_SERV", FILL["util" if k in UTIL_KEYS else "serv"])
 
+    hatch(EMERG, "MP_HATCH_LANDSCAPE", FILL["ls_gravel"])
+    outline(EMERG, "MP_EMERGENCY_LINK")
+    for kind, lay in CIRC_LAYERS.items():
+        for ln in ROUTES[kind]:
+            msp.add_lwpolyline([utm(q) for q in ln.coords], dxfattribs={
+                "layer": lay, "linetype": "DASHED" if kind in ("ped", "emergency") else "CONTINUOUS"})
     outline(SITE, "MP_BOUNDARY")
     outline(SITE_RAW, "MP_BOUNDARY_COORDS")
     outline(ROADS, "MP_ROADS")
@@ -230,6 +241,7 @@ def write_preview(png, pdf):
     for g in GARDEN_ROOMS + GARDENS:
         f(g, "ls_gravel", ec="#777", lw=0.4)
     f(OPEN["PARK_MALL"], "parking", ec="#555", lw=0.4)
+    f(EMERG, "ls_gravel", ec="#b00", lw=0.6, z=2.8)
     f(PLAZA, "plaza", ec="#468", lw=0.5)
     f(PLAY, "play", ec="#975", lw=0.4, z=3.5)
 
@@ -322,7 +334,7 @@ def write_preview(png, pdf):
     ax.set_aspect("equal")
     ax.axis("off")
 
-    fig.text(0.5, 0.965, "المخطط العام - البديل 3: الحديقة الطولية   |   MASTER PLAN - VARIANT 3: THE LINEAR PARK",
+    fig.text(0.5, 0.965, "المخطط العام - البديل 3: الحديقة الطولية (تعديل 1)   |   MASTER PLAN - VARIANT 3: THE LINEAR PARK - REV 1",
              ha="center", fontsize=26, fontweight="bold")
     fig.text(0.5, 0.945, "مجمع الشلالات السكني - القطعة 157 م53 بايبوخت - فرصة هيئة استثمار نينوى 5/2026", ha="center", fontsize=15)
     rows = table_rows()
@@ -363,19 +375,18 @@ def write_preview(png, pdf):
     nt.axis("off")
     notes = [
         "الفكرة: حديقة طولية متصلة بطول الموقع في الوسط بدل الشارع المركزي.",
-        "لكل جهة (شمال وجنوب) طريق حلقي: شارع خارجي وشارع على الحديقة يلتقيان",
-        "عند الطرفين، يخدمان صف قطع على السور وصفا مزدوجا بين الشارعين.",
-        "كل القطع المزدوجة تطل على الحديقة، وممر أخضر يقطع كل صف مزدوج.",
-        "الأبراج الثلاثة وسط الحديقة حيث تتسع إلى بلازا، بترتيب متعرج،",
-        "ونزول سيارات من الحلقتين فقط (العبوران الوحيدان للحديقة).",
-        "كل الخدمات في حي مدني عند البوابة الرئيسية في الطرف الغربي العريض:",
-        "مول وموقفه، جامع، صحي، روضة، نادي وملاعب، ابتدائية وثانوية،",
-        "والشرطة والدفاع المدني والمرافق عند بوابة الخدمة جنوبا.",
-        "الفلل في الجزء الغربي، الدور حول الأبراج وفي الشرق،",
-        "والطرف الشرقي الضيق حديقة كبرى تنتهي بها الحديقة الطولية.",
+        "لكل جهة طريق حلقي (شارع خارجي وشارع على الحديقة) يخدم صفا على السور وصفا مزدوجا.",
+        "الأبراج وسط الحديقة على بلازا، ونزول سيارات من الحلقتين فقط.",
+        "تعديل 1: الروضة والابتدائية والجامع حول البلازا في قلب الحديقة،",
+        "كل منها على شارع حلقي ومسار توصيل، والمشي إليها داخل الحديقة بلا عبور شوارع.",
+        "تعديل 1: عند البوابة: المول وموقفه، المركز الصحي، الثانوية مع موقف توصيل جانبي.",
+        "تعديل 1: إلغاء النادي، وأرضه صارت الحديقة الغربية.",
+        "تعديل 1: رابط طوارئ (عشب مسلح بحواجز) عبر الحديقة الشرقية يجعل الحلقتين حلقة واحدة.",
+        "الخدمة والمرافق والشرطة والدفاع المدني على شارع الخدمة فقط، لا تدخل السكن.",
         "الحدائق على أسلوب الصورة المرجعية (مسار ملون، مسطحات مضلعة، رصيف خشبي، نخيل).",
         f"موقف سرداب تحت البلازا لـ {PARK_NEED} سيارة (1.5 لكل شقة).",
         "لا شوارع على الطرفين القصيرين، ومدخلان فقط: رئيسي شمالا وخدمة جنوبا.",
+        "مخطط الحركة والعلاقات في ملف منفصل.",
         "",
         "Layers MP_*; colours follow the architect's sketch.",
     ]
@@ -385,9 +396,138 @@ def write_preview(png, pdf):
     fig.savefig(pdf)
 
 
+CIRC_STYLE = {
+    "main": ("#c62828", 4.5, "-", "Main road: gate - roundabout - civic street", "الطريق الرئيسي: البوابة - الدوار - الشارع المدني"),
+    "loop": ("#ef8a17", 3.0, "-", "Residential loops (north + south)", "الحلقتان السكنيتان (شمال وجنوب)"),
+    "drop": ("#1e63b5", 3.0, "-", "Drop-off lanes to the plaza, KG, school, mosque", "مسارات التوصيل للبلازا والروضة والمدرسة والجامع"),
+    "service": ("#8e44ad", 3.5, "-", "Service street (utilities, police, civil defence)", "شارع الخدمة (المرافق، الشرطة، الدفاع المدني)"),
+    "emergency": ("#d50000", 2.2, (0, (4, 2)), "Emergency ring (bollarded link)", "حلقة الطوارئ (رابط بحواجز)"),
+    "ped": ("#1b8a3a", 2.2, (0, (2, 1.4)), "Pedestrian park path + green links", "مسار المشاة في الحديقة والممرات الخضراء"),
+}
+DEST_AR = {"KG": "الروضة", "MOSQUE": "الجامع", "PRIMARY": "الابتدائية", "SECONDARY": "الثانوية", "MALL": "المول",
+           "HEALTH": "الصحي", "PARK": "الحديقة"}
+
+
+def write_circulation(png, pdf):
+    FILL_N = {k: tuple(c / 255 for c in v) for k, v in FILL.items()}
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib import font_manager
+
+    fdir = os.path.join(HERE, "..", "fonts")
+    for f_ in font_manager.findSystemFonts(fdir):
+        font_manager.fontManager.addfont(f_)
+    plt.rcParams["font.family"] = ["DejaVu Sans", "Noto Sans Arabic"]
+    fig = plt.figure(figsize=(33.1, 23.4))
+    ax = fig.add_axes([0.02, 0.33, 0.96, 0.60])
+    pale = lambda c: tuple(1 - (1 - v / 255) * 0.35 for v in c)  # noqa: E731
+
+    def f(g, rgb, ec="#bbb", lw=0.3, z=1):
+        for p in polys(g):
+            ax.fill(*p.exterior.xy, fc=rgb, ec=ec, lw=lw, zorder=z)
+            for h in p.interiors:
+                ax.fill(*h.xy, fc="white", ec=ec, lw=lw, zorder=z)
+
+    f(SITE, (0.96, 0.96, 0.96), ec="none")
+    for p in VILLAS:
+        f(p, pale(FILL["villa"]))
+    for p in HOUSES:
+        f(p, pale(FILL["house"]))
+    for g in GARDEN_ROOMS + GARDENS + LINKS + WALKS + [EMERG]:
+        f(g, pale(FILL["park"]))
+    f(PLAZA_ALL, pale(FILL["plaza"]))
+    for t_ in TOWERS:
+        f(t_, FILL_N["tower"], ec="#123", lw=0.6, z=3)
+    for k, g in SERV.items():
+        f(g, FILL_N["util" if k in UTIL_KEYS else "serv"], ec="#333", lw=0.5, z=3)
+    f(OPEN["PARK_MALL"], pale(FILL["parking"]))
+    ax.plot(*SITE.exterior.xy, color="#c00", lw=1.6, zorder=6)
+    for kind in ("loop", "main", "service", "drop", "emergency", "ped"):
+        c, lw, ls, *_ = CIRC_STYLE[kind]
+        for ln in ROUTES[kind]:
+            ax.plot(*ln.xy, color=c, lw=lw, ls=ls, zorder=7 if kind != "ped" else 8, solid_capstyle="round")
+    for g in (GATE, SGATE):
+        ax.plot(*g.xy, color="#d00", lw=7, zorder=9, solid_capstyle="butt")
+    ax.text(GATE_U, north_v(GATE_U) + 12, "البوابة الرئيسية\nMAIN GATE", ha="center", fontsize=11, fontweight="bold", color="#b00")
+    ax.text(SGATE_U, -16, "بوابة الخدمة والطوارئ\nSERVICE / EMERGENCY GATE", ha="center", fontsize=10, fontweight="bold", color="#b00")
+    for k, g in SERV.items():
+        q = g.representative_point()
+        ax.text(q.x, q.y, f"{NAMES[k][1]}\n{NAMES[k][0]}", ha="center", va="center", fontsize=7, zorder=10,
+                bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.8))
+    # walking radii from the heart (kindergarten + mosque + primary school)
+    heart = unary_union([SERV["KG"], SERV["MOSQUE"], SERV["PRIMARY"]]).centroid
+    ax.add_patch(plt.Circle((heart.x, heart.y), 300, fc="none", ec="#1e63b5", lw=1.0, ls=(0, (6, 4)), zorder=5))
+    for t_, (x, y) in ((("قلب الحديقة: الأبراج + الروضة + الابتدائية + الجامع", "PARK HEART"), (heart.x - 165, heart.y + 5)),
+                       (("الحي المدني: مول، صحي، ثانوية، شرطة، مرافق", "CIVIC QUARTER AT THE GATE"), (75, 300)),
+                       (("الحديقة الشرقية", "EAST GARDEN"), (EAST_GARDEN.centroid.x + 20, EAST_GARDEN.centroid.y))):
+        ax.text(x, y, f"{t_[0]}\n{t_[1]}", ha="center", fontsize=12, fontweight="bold", color="#222", zorder=11,
+                bbox=dict(boxstyle="round,pad=0.35", fc="#fffbe8", ec="#888", lw=0.6))
+    ax.set_xlim(-80, 900)
+    ax.set_ylim(-35, 330)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    fig.text(0.5, 0.965, "مخطط الحركة والعلاقات - البديل 3: الحديقة الطولية (تعديل 1)   |   CIRCULATION + RELATIONSHIPS - VARIANT 3",
+             ha="center", fontsize=26, fontweight="bold")
+    fig.text(0.5, 0.945, "فصل الحركة: سيارات السكان على الحلقتين، الخدمة على شارعها، المشاة في الحديقة بلا عبور شوارع",
+             ha="center", fontsize=15)
+    # legend
+    lg = fig.add_axes([0.03, 0.03, 0.30, 0.27])
+    lg.axis("off")
+    for i, k in enumerate(CIRC_STYLE):
+        c, lw, ls, en, ar = CIRC_STYLE[k]
+        y = 0.95 - i * 0.12
+        lg.plot([0, 0.12], [y, y], color=c, lw=lw * 1.4, ls=ls, transform=lg.transAxes)
+        lg.text(0.15, y, f"{en}\n{ar}", fontsize=11, va="center", transform=lg.transAxes)
+    lg.plot([0, 0.12], [0.95 - 6 * 0.12] * 2, color="#1e63b5", lw=1.2, ls=(0, (6, 4)), transform=lg.transAxes)
+    lg.text(0.15, 0.95 - 6 * 0.12, "300 m radius from the park heart\nدائرة 300 م من قلب الحديقة", fontsize=11, va="center",
+            transform=lg.transAxes)
+    lg.text(0.15, 0.95 - 7 * 0.12, "DXF layers MP_CIRC_* (one per route type)", fontsize=10, va="center",
+            transform=lg.transAxes, color="#555")
+    # walking distances
+    d = distances()
+    cols = DEST + ["PARK"]
+    tb = fig.add_axes([0.35, 0.03, 0.33, 0.27])
+    tb.axis("off")
+    tb.text(1.0, 1.0, "أبعد مسافة مشي (م) على الشوارع والمسارات   |   LONGEST WALK (m) ON THE NETWORK", ha="right",
+            fontsize=12, fontweight="bold", va="top")
+    for j, k in enumerate(cols):
+        tb.text(0.36 + j * 0.09, 0.88, f"{DEST_AR[k]}\n{k.title()}", ha="center", fontsize=10, fontweight="bold", va="top")
+    for i, (g, row) in enumerate(d.items()):
+        en, ar = g.split(" - ")
+        y = 0.72 - i * 0.13
+        tb.text(0.0, y, f"{ar}\n{en}", fontsize=10, va="center")
+        for j, k in enumerate(cols):
+            v = row[k]
+            col = "#1b8a3a" if v <= 450 else ("#c77800" if v <= 650 else "#c62828")
+            tb.text(0.36 + j * 0.09, y, f"{v:,.0f}", ha="center", va="center", fontsize=11, color=col, fontweight="bold")
+    tb.text(0.0, 0.03, "أخضر ≤ 450 م، برتقالي ≤ 650 م، أحمر أكثر. الثانوية والمول والصحي عند البوابة عمدا (زوار، إسعاف، شاحنات).",
+            fontsize=9.5, va="bottom", color="#444")
+    nt = fig.add_axes([0.70, 0.03, 0.28, 0.27])
+    nt.axis("off")
+    for i, n in enumerate(IMPROVEMENTS):
+        nt.text(1, 1 - i * 0.075, n, fontsize=11, ha="right", va="top", transform=nt.transAxes)
+    fig.savefig(png, dpi=110)
+    fig.savefig(pdf)
+
+
+IMPROVEMENTS = [
+    "التحسينات في تعديل 1:",
+    "1. الروضة والابتدائية والجامع نُقلت من البوابة إلى قلب الحديقة حول الأبراج.",
+    "2. المشي إليها داخل الحديقة فقط، بلا عبور أي شارع؛ ولكل منها مسار توصيل للسيارة.",
+    "3. إلغاء النادي، وأرضه أُضيفت إلى الحديقة الغربية.",
+    "4. موقف توصيل جانبي للثانوية على شارع الدخول، لا يوقف الحركة.",
+    "5. رابط طوارئ عبر الحديقة الشرقية: الحلقتان صارتا حلقة واحدة للإسعاف والإطفاء.",
+    "6. شاحنات الخدمة على شارع الخدمة فقط، لا تمر بالسكن أبدا.",
+    "7. البوابة الرئيسية تخدم السكان والزوار، والمول والصحي أول ما يُصادف فلا يدخل الزوار للسكن.",
+    "8. كل قطعة تبعد عن الحديقة أقل من 85 م، وكل صف مزدوج له ممر أخضر إليها.",
+]
+
+
 if __name__ == "__main__":
     out_dir = sys.argv[1] if len(sys.argv) > 1 else HERE
     base = os.path.join(out_dir, "SHALLALAT_MASTERPLAN_V3_LINEAR_PARK")
     write_dxf(base + ".dxf")
     write_preview(base + "_preview.png", base + "_preview.pdf")
+    write_circulation(base + "_CIRCULATION.png", base + "_CIRCULATION.pdf")
     print("\n".join(table_rows()))
