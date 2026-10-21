@@ -15,6 +15,7 @@ Geometry is in the local frame of make_masterplan_D.py: u along the south edge Q
 the north edge, written to the DXF in UTM 38S on the net 199,175 m2 boundary.
 """
 import math
+import sys
 
 import numpy as np
 from shapely.geometry import LineString, Point, Polygon, box
@@ -102,28 +103,28 @@ R_IN = REST.buffer(-BELT, join_style="mitre")
 
 # --- the heart: ring road, central park, towers -------------------------------------------------------
 HC = (430.0, 114.0)                           # centre of the ring = the towers' axis
-RING_A, RING_B, RING_W = 88.0, 78.0, 14.0     # centre-line semi axes, carriageway + kerbs
-ARC_D, ARC_F, ARC_VERGE = 20.0, 12.0, 2.0      # houses round the ring: depth, mean frontage, front verge
+RING_A, RING_B, RING_W = 78.0, 72.0, 14.0     # centre-line semi axes, carriageway + kerbs
+ARC_D, ARC_F, ARC_VERGE = 24.0, 10.0, 2.0      # houses round the ring: depth, mean frontage, front verge
 RING_OUT = ellipse(HC, RING_A + RING_W / 2, RING_B + RING_W / 2)
 RING_INN = ellipse(HC, RING_A - RING_W / 2, RING_B - RING_W / 2)
 RING = RING_OUT.difference(RING_INN)
 PARK = RING_INN.buffer(-2.0)                  # central park «حديقة الشلالات» inside the ring
 
 TW = 28.3                                     # 800 m2 floor plate, 4 corner flats per floor
-T_CENTRES = [(HC[0] - 62, HC[1] - 5), (HC[0], HC[1] + 30), (HC[0] + 62, HC[1] - 5)]   # an arc facing the gate
+T_CENTRES = [(HC[0] - 31, HC[1] - 22), (HC[0] + 31, HC[1] - 22), (HC[0], HC[1] + 40)]   # a triangle round the plaza
 TOWERS = [box(x - TW / 2, y - TW / 2, x + TW / 2, y + TW / 2) for x, y in T_CENTRES]
 TOWER_GAP = min(TOWERS[i].distance(TOWERS[j]) for i in range(3) for j in range(i + 1, 3))
 PODIUM = unary_union(TOWERS).convex_hull.buffer(4, join_style="mitre")   # plaza over the basement car park
 PARK_CARS = 360
 BASEMENT_LEVELS = math.ceil(PARK_CARS * 30.0 / PODIUM.area)               # ~30 m2 gross per car
 T_PLAZA = PODIUM
-T_DROP = band((HC[0], HC[1] + RING_B - RING_W / 2), (HC[0], 172.0), 4.0).union(
-    Point((HC[0], 172.0 - 4)).buffer(9)).intersection(RING_INN)
-LAKE = ellipse((HC[0], HC[1] - 47), 40, 13)    # lake fed by cascades «الشلالات»
-CASCADE = box(HC[0] - 12, HC[1] - 33, HC[0] + 12, HC[1] - 26)
-PATHS = [LineString([(HC[0] - 78, HC[1] - 28), (HC[0] - 44, HC[1] - 32), (HC[0] - 30, HC[1] - 46)]),
-         LineString([(HC[0] + 78, HC[1] - 28), (HC[0] + 44, HC[1] - 32), (HC[0] + 30, HC[1] - 46)]),
-         LineString([(HC[0], HC[1] - 74), (HC[0], HC[1] - 60)])]
+T_DROP = box(HC[0] - 16, HC[1] + 40 + TW / 2 + 1, HC[0] + 16, HC[1] + RING_B).intersection(RING_INN)   # drop-off
+LAKE = ellipse((HC[0], HC[1] - 52), 30, 7)     # lake fed by cascades «الشلالات»
+CASCADE = box(HC[0] - 9, HC[1] - 45, HC[0] + 9, HC[1] - 41)
+PATHS = [LineString([(HC[0] - RING_A + 8, HC[1]), (HC[0] - 50, HC[1] + 4), (HC[0] - 20, HC[1] + 6)]),
+         LineString([(HC[0] + RING_A - 8, HC[1]), (HC[0] + 50, HC[1] + 4), (HC[0] + 20, HC[1] + 6)]),
+         LineString([(HC[0] - 40, HC[1] - 50), (HC[0] - 56, HC[1] - 30)]),
+         LineString([(HC[0] + 40, HC[1] - 50), (HC[0] + 56, HC[1] - 30)])]
 
 # gates (kept to the minimum at the client's request): one main gate on the north road on the towers'
 # axis; one service / emergency gate at the east tip for the utilities. No gate to the cross road or the south road.
@@ -167,7 +168,7 @@ E_END = Point(SPINES["E"][1]).buffer(13)         # turning circle at the east en
 W_END = Point(FR["W"].p(20, 0)).buffer(13)      # turning circle at the west end, wall towards the cross road
 
 # --- utilities at the east tip -------------------------------------------------------------------------
-UTIL_U = 822.0
+UTIL_U = 832.0
 UTIL = R_IN.intersection(box(UTIL_U, -100, 2000, 500))
 U_GATE = LineString([(UTIL_U + 6, 0.5), (UTIL_U + 18, 0.5)])   # service / emergency gate on the south road
 
@@ -200,6 +201,7 @@ def _arc_plots():
 
 
 ARC, ARC_SPECS = _arc_plots()
+ARC_CAP = len(ARC)
 
 
 def arc_footprint(t1, t2):   # 120 m2 class footprint: 2.5 m front setback, 12 m deep, attached
@@ -211,7 +213,7 @@ def arc_footprint(t1, t2):   # 120 m2 class footprint: 2.5 m front setback, 12 m
 # --- housing: U-lanes wrapped around green courts ----------------------------------------------------
 LANE = 7.0        # shared-surface lane, one way round the court
 VERGE = 3.0       # planted strip between the spine and the first plots
-TYPES = {"V": (16.0, 25.0), "H": (12.0, 20.0)}     # frontage x depth -> 400 / 240 m2
+TYPES = {"V": (16.0, 25.0), "H": (10.0, 24.0)}     # frontage x depth -> 400 / 240 m2
 MIN_GREEN = 16.0
 
 
@@ -238,9 +240,12 @@ def make_block(fr, t0, side, kind, region, G):
         lo, hi = (m, hi) if fits(R(t0 + d, t0 + B - d, n0, m), region) else (lo, m)
     n_core = lo
 
+    mouth = kind == "H" and G >= f   # attached houses also close the court towards the spine
+    c0 = n0 + d + 2.0 if mouth else n0
+
     def option(back):
         n_lane = n_core - LANE - (d if back else 0)
-        if n_lane - n0 < MIN_GREEN:
+        if n_lane - c0 < MIN_GREEN:
             return None
         side_end = n_lane + LANE
         row_end = n_lane if back else side_end   # with a back row the far lane runs the full block width
@@ -262,10 +267,15 @@ def make_block(fr, t0, side, kind, region, G):
                 g = R(ta, ta + f, side_end, side_end + d)
                 if fits(g, region):
                     plots.append(g); specs.append((ta, ta + f, side_end, side_end + d, "n-"))
+        if mouth:   # one house between the lane mouths, facing the spine
+            ta = t0 + d + LANE + (G - f) / 2
+            g = R(ta, ta + f, n0, n0 + d)
+            if fits(g, region):
+                plots.append(g); specs.append((ta, ta + f, n0, n0 + d, "n-"))
         lane = unary_union([R(t0 + d, t0 + d + LANE, n0 - VERGE - 0.5, side_end),
                             R(t0 + B - d - LANE, t0 + B - d, n0 - VERGE - 0.5, side_end),
                             R(t0 if back else t0 + d, t0 + B if back else t0 + B - d, n_lane, side_end)])
-        court = R(t0 + d + LANE, t0 + B - d - LANE, n0, n_lane)
+        court = R(t0 + d + LANE, t0 + B - d - LANE, c0, n_lane)
         strip = unary_union([R(t0 + d, t0 + B - d, n0 - VERGE, side_end), lane] + plots)
         return dict(kind=kind, side=side, t0=t0, B=B, G=G, plots=plots, specs=specs, lane=lane, court=court,
                     strip=strip, n0=n0, n_max=side_end + (d if back else 0), s=s, fr=fr, back=back)
@@ -315,7 +325,7 @@ G = {"V": 18.0, "H": 18.0}
 PLAN = {
     ("W", "N"): ("", "V"),
     ("W", "S"): ("", "V"),
-    ("E", "N"): ("", "H"),
+    ("E", "N"): ("HHHV", "H"),
     ("E", "S"): ("", "V"),
 }
 N_VILLAS, N_HOUSES = 80, 88
@@ -334,7 +344,7 @@ def trim(kind, n_keep):
         extra -= 1
 
 
-trim("V", N_VILLAS)
+trim("V", N_VILLAS) if "--raw" not in sys.argv else None
 _h_blocks = sum(len(b["plots"]) for b in BLOCKS if b["kind"] == "H")
 _n_arc = max(0, N_HOUSES - _h_blocks)
 if _n_arc < len(ARC):   # keep the ring houses nearest the gate axis, the rest become garden
@@ -342,7 +352,7 @@ if _n_arc < len(ARC):   # keep the ring houses nearest the gate axis, the rest b
     order.sort()
     ARC = [ARC[i] for i in order]
     ARC_SPECS = [ARC_SPECS[i] for i in order]
-trim("H", N_HOUSES - len(ARC))
+trim("H", N_HOUSES - len(ARC)) if "--raw" not in sys.argv else None
 for i, b in enumerate(BLOCKS):
     b["name"] = f"{'V' if b['kind'] == 'V' else 'H'}{i + 1:02d}"
 
@@ -350,33 +360,77 @@ VILLAS = [p for b in BLOCKS if b["kind"] == "V" for p in b["plots"]]
 HOUSES = [p for b in BLOCKS if b["kind"] == "H" for p in b["plots"]] + ARC
 N_APTS = 3 * 20 * 4
 
-# --- public front west of the cross road (same zoning as proposal D) ------------------------------------
+# --- public front west of the cross road: services that serve visitors too (reached from the outer roads) --
 W_IN = WEST.buffer(-3, join_style="mitre")
-PUB = {   # exact program areas, laid out west of the cross road (public, reached from the outer roads)
-    "PRIMARY": box(2, 3, 62, 53),               # 3,000
-    "SECONDARY": box(2, 58, 72, 58 + 5000 / 70),  # 5,000 intermediate + preparatory
-    "MALL": box(2, 135, 62, 185),               # 3,000
-    "HEALTH": box(80, 128, 120, 153),           # 1,000
-    "MOSQUE": box(68, 160, 115, 160 + 2000 / 47),  # 2,000
-    "KG": box(2, 192, 52, 222),                 # 1,500
-    "POWER": box(68, 210, 108, 235),            # 1,000 (33/11 kV)
-    "POLICE": box(0, 268, 24, 293),             # 600
-    "CIVIL_DEF": box(30, 262, 54, 287),         # 600
+PUB = {   # exact program areas
+    "PRIMARY": box(4, 4, 64, 54),                   # 3,000
+    "SECONDARY": box(4, 60, 74, 60 + 5000 / 70),    # 5,000 intermediate + preparatory
+    "MALL": box(4, 140, 64, 190),                   # 3,000
+    "HEALTH": box(80, 128, 120, 153),               # 1,000
+    "POWER": box(68, 210, 108, 235),                # 1,000 (33/11 kV)
+    "POLICE": box(0, 268, 24, 293),                 # 600
+    "CIVIL_DEF": box(30, 262, 54, 287),             # 600
 }
-MALL_PARK = box(2, 3, 62, 3).union(box(78, 3, 122, 120)).intersection(W_IN)   # mall / school / mosque car park
-MALL_PARK = box(78, 3, 120, 60).intersection(W_IN)
+PUB_PARK = {   # drop-off + parking
+    "P_SCHOOL": box(80, 4, 122, 60),
+    "P_MALL": box(70, 160, 114, 200),
+}
 PUB = {k: v.intersection(W_IN) for k, v in PUB.items()}
-ORCHARD = W_IN.difference(unary_union(list(PUB.values()) + [MALL_PARK]).buffer(3))
+PUB_PARK = {k: v.intersection(W_IN) for k, v in PUB_PARK.items()}
+ORCHARD = W_IN.difference(unary_union(list(PUB.values()) + list(PUB_PARK.values())).buffer(3))
 ORCHARD = max(polys(ORCHARD), key=lambda g: g.area)
 
-UTIL_ITEMS = {}
-_ub = UTIL.bounds
-UTIL_ITEMS["WATER"] = box(UTIL_U + 6, 46, UTIL_U + 6 + 40, 71).intersection(UTIL)
-UTIL_ITEMS["WASTE"] = box(UTIL_U + 30, 10, UTIL_U + 50, 25).intersection(UTIL)
-SERV = {}
+
+def cut_to(poly, axis, from_hi, target):
+    """Part of `poly` on one side of a line u=c or v=c holding `target` m2."""
+    x0, y0, x1, y1 = poly.bounds
+    lo, hi = (x0, x1) if axis == "u" else (y0, y1)
+    for _ in range(50):
+        m = (lo + hi) / 2
+        if axis == "u":
+            part = poly.intersection(box(m, -1e3, 1e4, 1e4) if from_hi else box(-1e4, -1e3, m, 1e4))
+        else:
+            part = poly.intersection(box(-1e4, m, 1e4, 1e4) if from_hi else box(-1e4, -1e4, 1e4, m))
+        if (part.area > target) == from_hi:
+            lo = m
+        else:
+            hi = m
+    return max(polys(part), key=lambda p: p.area)
+
+
+# --- mosque and kindergarten inside the compound, on the boulevard by the main gate ---------------------
+_taken = unary_union([b["strip"] for b in BLOCKS] + ARC + [RING_OUT, SPINE, UTIL]).buffer(3)
+_free_in = R_IN.difference(_taken).difference(BLVD.buffer(2)).difference(FORECOURT.buffer(2))
+
+
+def _corner(east):
+    bx = box(HC[0], HC[1], 1e4, 1e4) if east else box(-1e4, HC[1], HC[0], 1e4)
+    return max(polys(_free_in.intersection(bx)), key=lambda p: p.area)
+
+
+_nw = _corner(False)
+_kg = cut_to(_nw, "v", True, 1500.0)                                  # north part, by the gate forecourt
+SERV = {
+    "KG": _kg,
+    "MOSQUE": cut_to(_nw.difference(_kg.buffer(1.0)), "u", True, 2000.0),  # grows west from the boulevard
+}
+HEART_PARK = _corner(True).buffer(-1.0, join_style="mitre")              # mosque / KG visitors, NE of the boulevard
+
+# --- utilities at the east tip, by the service gate -------------------------------------------------------
+_u_in = UTIL.buffer(-2, join_style="mitre")
+UTIL_ITEMS = {
+    "WATER": cut_to(_u_in, "v", True, 1000.0),
+    "WASTE": cut_to(_u_in, "v", False, 300.0),
+}
+
+# tower basement ramps from the ring, so cars never cross the plaza
+_pb = PODIUM.bounds
+RAMPS = [box(HC[0] - RING_A + RING_W / 2 - 1, HC[1] - 28, _pb[0] + 1, HC[1] - 21),
+         box(_pb[2] - 1, HC[1] - 28, HC[0] + RING_A - RING_W / 2 + 1, HC[1] - 21)]
 
 # leftovers inside the compound: shared gardens and pocket parks
-_used = unary_union([b["strip"] for b in BLOCKS] + [SPINE, E_END, W_END, RING_OUT, BLVD, FORECOURT, UTIL] + ARC)
+_used = unary_union([b["strip"] for b in BLOCKS] + [SPINE, E_END, W_END, RING_OUT, BLVD, FORECOURT, UTIL] + ARC
+                    + list(SERV.values()) + [HEART_PARK])
 GARDENS = [g for g in polys(R_IN.difference(_used.buffer(0.3))) if g.area > 120]
 
 
@@ -391,25 +445,25 @@ LANDUSE = [
     ("Villa plots 400 m2 - قطع الفلل", len(VILLAS) * 400.0),
     ("House plots 240 m2 - قطع الدور", total(HOUSES)),
     ("Tower plaza over basement - ساحة الأبراج فوق السرداب", PODIUM.area),
-    ("Public services - الخدمات العامة", total(PUB.values())),
+    ("Public services - الخدمات العامة", total(PUB.values()) + total(SERV.values())),
     ("Utilities (water, waste) - المرافق (ماء، نفايات)", total(UTIL_ITEMS.values())),
-    ("Ring, spine, gates, parking - الحلقة والمحور والبوابات والمواقف", ROADS.area + MALL_PARK.area),
+    ("Ring, spine, gates, parking - الحلقة والمحور والبوابات والمواقف", ROADS.area + total(PUB_PARK.values()) + HEART_PARK.area),
     ("Court lanes - أزقة البلوكات", LANES.area),
     ("Cross road (public) - الشارع العرضي", CROSS_IN.area),
     ("Green: park, courts, gardens, belts - المساحات الخضراء", 0.0),
 ]
 LANDUSE[-1] = (LANDUSE[-1][0], SITE.area - sum(a for _, a in LANDUSE))
 GREEN_M2 = LANDUSE[-1][1]
-ROADS_M2 = ROADS.area + MALL_PARK.area + LANES.area + CROSS_IN.area
+ROADS_M2 = ROADS.area + total(PUB_PARK.values()) + HEART_PARK.area + LANES.area + CROSS_IN.area
 
 if __name__ == "__main__":
-    print(f"site {SITE.area:,.0f}  west {WEST.area:,.0f}  park {RING_INN.area:,.0f}  util {UTIL.area:,.0f}  arc {len(ARC)}"
+    print(f"site {SITE.area:,.0f}  west {WEST.area:,.0f}  park {RING_INN.area:,.0f}  util {UTIL.area:,.0f}  arc {len(ARC)}/{ARC_CAP}"
           f"  podium {PODIUM.area:,.0f} x{BASEMENT_LEVELS}")
     for b in BLOCKS:
         print(b["name"], b["kind"], b["side"], f"t0={b['t0']:.0f} B={b['B']:.0f} depth={b['n_max'] - b['n0']:.0f} back={b['back']}",
               len(b["plots"]), f"court {b['court'].area:.0f}")
     print("villas", len(VILLAS), "houses", len(HOUSES), "units", len(VILLAS) + len(HOUSES) + N_APTS)
-    for k, v in {**PUB, **UTIL_ITEMS}.items():
+    for k, v in {**PUB, **SERV, **UTIL_ITEMS, **PUB_PARK}.items():
         print(f"{k:12s} {v.area:8,.0f}")
     for n, a in LANDUSE:
         print(f"{n:55s} {a:9,.0f} {a / SITE.area * 100:5.1f}")
