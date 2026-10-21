@@ -40,7 +40,7 @@ site_a = P.SITE.area
 services_a = sum(g.area for g in P.SERVICES.values())
 greens = {
     "Central park (oval) - الحديقة المركزية البيضوية": P.PARK.area,
-    "Valley park & sports ground - حديقة الوادي والساحة الرياضية": P.VALLEY_PARK.area,
+    "Sports ground - الساحة الرياضية": P.SPORTS.area,
     "Orchard green - البستان": P.ORCHARD.area,
 }
 LANDUSE = [
@@ -76,6 +76,8 @@ msp = doc.modelspace()
 for e in list(msp.query("TEXT[layer=='TEXT']")):  # the site plan's plot title sits on the park
     if e.dxf.text.startswith(("PLOT 157", "مقاطعة 53")):
         msp.delete_entity(e)
+if "WATER_APPROX" in doc.layers:  # watercourse ignored at the client's request (2026-10-21)
+    doc.layers.get("WATER_APPROX").off()
 LAYERS = {  # name: (ACI colour, lineweight)
     "MP_HATCH_RES": (31, 0), "MP_HATCH_SERVICE": (202, 0), "MP_HATCH_GREEN": (82, 0), "MP_HATCH_ROAD": (252, 0),
     "MP_HATCH_TOWER": (11, 0), "MP_HATCH_WATER": (151, 0),
@@ -139,8 +141,7 @@ add_hatch(unary_union(villas), "MP_HATCH_RES", 31)
 add_hatch(unary_union(houses), "MP_HATCH_RES", 51)
 add_hatch(P.TOWER_ZONE, "MP_HATCH_TOWER", 11)
 add_hatch(unary_union(list(P.SERVICES.values())), "MP_HATCH_SERVICE", 202)
-add_hatch(unary_union([P.PARK, P.ORCHARD, P.VALLEY_PARK, P.BUFFERS]), "MP_HATCH_GREEN", 82)
-add_hatch(P.WATERCOURSE.buffer(4).intersection(P.SITE), "MP_HATCH_WATER", 151, 0.1)
+add_hatch(unary_union([P.PARK, P.ORCHARD, P.SPORTS, P.BUFFERS]), "MP_HATCH_GREEN", 82)
 
 # roads: edges of the merged network + centre lines
 add_outline(P.ALL_ROADS, "MP_ROAD_EDGE")
@@ -152,7 +153,7 @@ for tc in P.VILLA_STREETS_T:
     add_line([(P.WEST_LOOP.bounds[0] + 10, tc), (P.avenue_edge(-1, tc), tc)], "MP_ROAD_CL", "CENTER")
 for tc in P.HOUSE_STREETS_T:
     add_line([(P.avenue_edge(1, tc), tc), (P.WEST_COLL_S[0], tc)], "MP_ROAD_CL", "CENTER")
-add_line([(P.PARK_C[0] + P.PARK_A + P.RING_W, P.PARK_C[1]), (P.EAST_ISLAND_S, P.PARK_C[1])], "MP_ROAD_CL", "CENTER")
+add_line([(P.PARK_C[0] + P.PARK_A + P.RING_W, P.PARK_C[1]), (P.EAST_LOOP_S, P.PARK_C[1])], "MP_ROAD_CL", "CENTER")
 add_outline(P.BOULEVARD_MEDIAN.difference(P.GATEHOUSE.buffer(2)), "MP_GREEN")
 # avenue: planted median
 add_outline(P.CROSS_ROAD.buffer(2.5, cap_style=2).intersection(P.SITE).difference(
@@ -195,7 +196,6 @@ add_outline(P.GATEHOUSE, "MP_GATE")
 # greens, paths, water, trees
 add_outline(P.PARK, "MP_PARK")
 add_outline(P.ORCHARD, "MP_GREEN")
-add_outline(P.VALLEY_PARK, "MP_GREEN")
 add_outline(P.SPORTS, "MP_GREEN")
 lake = P.affinity.scale(Point(P.PARK_C).buffer(1.0, resolution=64), 32, 14)
 lake = P.affinity.translate(lake, -40, 4)
@@ -207,11 +207,6 @@ park_loop = P.affinity.scale(Point(P.PARK_C).buffer(1.0, resolution=96), P.PARK_
 add_line(list(park_loop.coords), "MP_PATH")
 add_line([(P.GATE_S, P.PARK_C[1] + P.PARK_B), (P.GATE_S, P.PARK_C[1] - P.PARK_B)], "MP_PATH")
 add_line([(P.GATE_S - 2, P.PARK_C[1] + P.PARK_B), (P.GATE_S - 2, P.PARK_C[1] - P.PARK_B)], "MP_PATH")
-add_line(list(P.WATERCOURSE.intersection(P.SITE).coords), "MP_WATER")
-trail = P.WATERCOURSE.parallel_offset(10, "left").intersection(P.VALLEY_PARK)
-for seg in getattr(trail, "geoms", [trail]):
-    if seg.length > 5:
-        add_line(list(seg.coords), "MP_PATH", "DASHED")
 for s, t in P.TREES:
     msp.add_circle(P.to_utm(s, t), 4.0, dxfattribs={"layer": "MP_TREE"})
 for k in range(0, 9):  # orchard planting grid
@@ -258,9 +253,8 @@ for txt, s, t, h in [
     ("ORCHARD VILLAS - حي فلل البستان", 60, 278, 5),
     ("ORCHARD - البستان", 68, 128, 3.5),
     ("COURT HOUSES - حي الدور", 215, 262, 4),
-    ("VALLEY VILLAS - فلل الوادي", 626, 182, 3.0),
-    ("VALLEY PARK - حديقة الوادي", 684, 60, 3.5),
-    ("SPORTS GROUND - ساحة رياضية", 687, 148, 2.6),
+    ("EAST VILLAS - حي الفلل الشرقي", 664, 186, 3.0),
+    ("SPORTS GROUND - ساحة رياضية", 846, 125, 2.6),
     ("NORTH GREEN BELT - حزام أخضر", 120, 292, 3),
 ]:
     add_text(txt, s, t, h)
@@ -306,7 +300,7 @@ rows += [
     ("2. Roads: ring 16 m, gate boulevard 24 m, collector 16 m, avenue 20 m, local 14 m.", 3.0),
     ("3. Building footprints are indicative (villa 30 %, house 60 % coverage).", 3.0),
     ("4. Towers 34 x 24 m, 40 m apart, >= 12 m from the fence; basement parking.", 3.0),
-    ("5. Watercourse, trees and cross road are traced from the scan (approx.).", 3.0),
+    ("5. Watercourse ignored at the client's request; trees and cross road traced from the scan.", 3.0),
 ]
 y = y0
 for txt, h in rows:
@@ -382,8 +376,6 @@ for a, b in ((3, 0), (1, 2)):
         q0 = (p0[0] + n[0] * (4.84 + d) - u[0] / L * 60, p0[1] + n[1] * (4.84 + d) - u[1] / L * 60)
         q1 = (p1[0] + n[0] * (4.84 + d) + u[0] / L * 60, p1[1] + n[1] * (4.84 + d) + u[1] / L * 60)
         ax.plot([q0[0], q1[0]], [q0[1], q1[1]], color="#999", lw=0.5, zorder=0)
-wc_out = [P.to_utm(s, t) for s, t in P.WATERCOURSE.coords]
-ax.plot(*zip(*wc_out), color="#5a9bd5", lw=1.2, zorder=0)
 raw = [(338954.0, 4035462.0), (339032.0, 4035771.0), (339836.0, 4035336.0), (339747.0, 4035198.0)]
 ax.plot(*zip(*(raw + raw[:1])), color="#b05fb0", lw=0.4, ls="--", zorder=0)
 
@@ -392,16 +384,11 @@ fill(P.BUFFERS, COL["buffer"], z=1)
 fill(P.ALL_ROADS, COL["road"], "#8c8c8c", 0.3, z=2)
 fill(P.PARK, COL["park"], "#3f8f3f", 0.5, z=2)
 fill(P.ORCHARD, COL["green"], "#3f8f3f", 0.3, z=2)
-fill(P.VALLEY_PARK, COL["green"], "#3f8f3f", 0.3, z=2)
 fill(P.SPORTS, "#d7c49e", "#7a6a45", 0.3, z=3)
-fill(P.WATERCOURSE.buffer(4).intersection(P.SITE), COL["water"], z=3)
 fill(lake, COL["water"], "#3a78b5", 0.3, z=3)
 fill(cascade, COL["water"], "#3a78b5", 0.3, z=3)
 line(list(park_loop.coords), color="#f4ecd8", lw=1.4, zorder=3)
 line([(P.GATE_S, P.PARK_C[1] + P.PARK_B), (P.GATE_S, P.PARK_C[1] - P.PARK_B)], color="#f4ecd8", lw=2.2, zorder=3)
-for seg in getattr(trail, "geoms", [trail]):
-    if seg.length > 5:
-        line(list(seg.coords), color="#c7a96b", lw=0.7, ls="--", zorder=3)
 fill(P.BOULEVARD_MEDIAN.difference(P.GATEHOUSE.buffer(2)), COL["green"], z=3)
 fill(P.CROSS_ROAD.buffer(2.5, cap_style=2).intersection(P.SITE).difference(
     P.ALL_ROADS.difference(P.AVENUE).buffer(1)), COL["green"], z=3)
@@ -450,10 +437,8 @@ for txt, s, t, size in [
     (ar("حي فلل البستان") + "\nORCHARD VILLAS", 60, 285, 5.5),
     (ar("البستان"), 68, 128, 4.2),
     (ar("حي الدور") + "\nCOURT HOUSES", 222, 268, 4.6),
-    (ar("حديقة الوادي") + "\nVALLEY PARK", 684, 62, 4.2),
-    (ar("ساحة رياضية"), 687, 148, 3.2),
-    (ar("فلل الوادي"), 626, 186, 3.4),
-    (ar("فلل الوادي"), 742, 172, 3.4),
+    (ar("ساحة رياضية"), 846, 125, 3.2),
+    (ar("حي الفلل الشرقي") + "\nEAST VILLAS", 664, 188, 3.8),
     (ar("حزام أخضر"), 130, 290, 3.2),
 ]:
     label(txt, s, t, size, color="#1f3b1f", weight="bold")
@@ -481,7 +466,7 @@ tx_(X0 - 12, Y1 - 82, f"UTM 38S  ·  SCALE 1:2500 (A3)  ·  {site_a:,.0f} m2  ·
     color="#555")
 legend = [(COL["villa"], f"{ar('فلل 400 م²')}  ({N_V})"), (COL["house"], f"{ar('دور 200 م²')}  ({N_H})"),
           (COL["tower"], ar("برجان 20 طابقاً (152 شقة)")), (COL["service"], ar("خدمات وبنى تحتية")),
-          (COL["park"], ar("الحديقة المركزية")), (COL["green"], ar("حدائق وبستان ووادي")),
+          (COL["park"], ar("الحديقة المركزية")), (COL["green"], ar("حدائق وبستان وساحة رياضية")),
           (COL["road"], ar("طرق")), (COL["water"], ar("ماء"))]
 for i, (c, t) in enumerate(legend):
     yy = Y1 - 110 - i * 17

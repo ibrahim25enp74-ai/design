@@ -68,12 +68,12 @@ WEST_LOOP = clip(Polygon([(-40, -5), (-40, 320), (-22.87 + W_LOCAL, 308.0 + 1), 
 WEST_COLL_S = (300.0, 316.0)
 WEST_COLL = clip(box(WEST_COLL_S[0], -5, WEST_COLL_S[1], BIG))
 WEST_LINK = box(WEST_COLL_S[1] - 1, PARK_C[1] - 7, PARK_C[0] - PARK_A - RING_W + 4, PARK_C[1] + 7)
-VALLEY_ST_S = (638.0, 652.0)  # local street on the valley's west bank
-VALLEY_ST = clip(box(*VALLEY_ST_S[:1], -5, VALLEY_ST_S[1], BIG))
-EAST_ISLAND_S = 716.0
-EAST_SPINE = clip(box(PARK_C[0] + PARK_A + RING_W - 4, PARK_C[1] - 7, EAST_ISLAND_S + 1, PARK_C[1] + 7))
-EAST_LOOP = clip(box(EAST_ISLAND_S, -5, EAST_ISLAND_S + W_LOCAL, BIG))
-UTIL_S = 769.0
+EAST_ST_S = (638.0, 652.0)  # N-S local street east of the schools
+EAST_ST = clip(box(*EAST_ST_S[:1], -5, EAST_ST_S[1], BIG))
+EAST_LOOP_S = 702.0
+EAST_SPINE = clip(box(PARK_C[0] + PARK_A + RING_W - 4, PARK_C[1] - 7, EAST_LOOP_S + 1, PARK_C[1] + 7))
+EAST_LOOP = clip(box(EAST_LOOP_S, -5, EAST_LOOP_S + W_LOCAL, BIG))
+UTIL_S = 755.0
 EAST_UTIL_ROAD = clip(box(UTIL_S - W_LOCAL, -5, UTIL_S, BIG))
 
 VILLA_STREETS_T = [32.0, 96.0, 160.0, 224.0]  # villa blocks 25+25 deep, spacing 64
@@ -96,12 +96,11 @@ ROADS = {
     "BOULEVARD": BOULEVARD,
     "AVENUE": AVENUE,
     "COLLECTOR": unary_union([WEST_COLL, WEST_LINK, EAST_SPINE]),
-    "LOCAL": unary_union(villa_streets + house_streets + [WEST_LOOP, VALLEY_ST, EAST_LOOP, EAST_UTIL_ROAD]),
+    "LOCAL": unary_union(villa_streets + house_streets + [WEST_LOOP, EAST_ST, EAST_LOOP, EAST_UTIL_ROAD]),
 }
 ALL_ROADS = unary_union(list(ROADS.values()))
 
 # --- greens ---------------------------------------------------------------------------------------------
-VALLEY = clip(WATERCOURSE.buffer(22)).difference(ALL_ROADS)
 ORCHARD = box(38, 103, 98, 153)
 
 
@@ -152,8 +151,11 @@ for tc in VILLA_STREETS_T:
 for tc in HOUSE_STREETS_T:
     for side in (1, -1):
         houses += pack(tc, side, 100, WEST_COLL_S[0], 10, 20, HOUSE_ZONE)
-villas += pack_t(VALLEY_ST_S[0], -1, 0, 300, 16, 25, BUILDABLE)  # valley villas, west bank
-villas += pack_t(EAST_ISLAND_S + W_LOCAL, 1, 0, 300, 16, 25, BUILDABLE)  # valley villas, east bank
+# east villa quarter (the watercourse is ignored at the client's request): four columns of villas on two N-S streets
+villas += pack_t(EAST_ST_S[0], -1, 0, 300, 16, 25, BUILDABLE)
+villas += pack_t(EAST_ST_S[1], 1, 0, 300, 16, 25, BUILDABLE)
+villas += pack_t(EAST_LOOP_S, -1, 0, 300, 16, 25, BUILDABLE)
+villas += pack_t(EAST_LOOP_S + W_LOCAL, 1, 0, 300, 16, 25, BUILDABLE)
 
 # --- services -------------------------------------------------------------------------------------------
 HEART_FREE = SITE.difference(RING_OUT.buffer(3)).difference(BOULEVARD.buffer(3)).difference(ALL_ROADS.buffer(3))
@@ -164,7 +166,7 @@ def parcel(s0, s1, t0=-5, t1=BIG, base=HEART_FREE):
     return g
 
 
-SCHOOL_END = VALLEY_ST_S[0] - 25 - 4
+SCHOOL_END = EAST_ST_S[0] - 25 - 4
 ISLAND = BUILDABLE.intersection(box(UTIL_S, -5, BIG, BIG))
 SERVICES = {
     "SOCIAL CLUB, ADMIN & RESTAURANTS - النادي الاجتماعي والإدارة والمطاعم": parcel(WEST_COLL_S[1], GATE_S - 62, PARK_C[1]),
@@ -176,10 +178,10 @@ SERVICES = {
     "MOSQUE - جامع": parcel(GATE_S - 22, GATE_S + 22, -5, PARK_C[1]),
     "PRIMARY SCHOOL - مدرسة ابتدائية": parcel(GATE_S + 22, SCHOOL_END, -5, PARK_C[1]),
     "KINDERGARTEN - روضة وحضانة": KINDERGARTEN,
-    "SECONDARY SCHOOL - مدرسة إعدادية": parcel(UTIL_S + 3, BIG, 100, BIG, ISLAND),
-    "POWER SUBSTATION 33/11 kV - محطة كهرباء": parcel(UTIL_S + 3, 800, -5, 97, ISLAND),
-    "DESALINATION & WATER TREATMENT - محطة تحلية ومعالجة": parcel(803, 831, -5, 97, ISLAND),
-    "SEWAGE & WASTE - مجاري ونفايات": parcel(834, BIG, -5, 97, ISLAND),
+    "SECONDARY SCHOOL - مدرسة إعدادية": parcel(UTIL_S + 3, 820, 100, BIG, ISLAND),
+    "POWER SUBSTATION 33/11 kV - محطة كهرباء": parcel(UTIL_S + 3, 790, -5, 97, ISLAND),
+    "DESALINATION & WATER TREATMENT - محطة تحلية ومعالجة": parcel(793, 823, -5, 97, ISLAND),
+    "SEWAGE & WASTE - مجاري ونفايات": parcel(826, BIG, -5, 97, ISLAND),
 }
 TOWER_ZONE = parcel(GATE_S - 62, GATE_S + 62, PARK_C[1])
 
@@ -187,10 +189,9 @@ TOWER_ZONE = parcel(GATE_S - 62, GATE_S + 62, PARK_C[1])
 TOWER_LOTS = [TOWER_ZONE.intersection(box(GATE_S - 70, -5, GATE_S - 3, BIG)),
               TOWER_ZONE.intersection(box(GATE_S + 3, -5, GATE_S + 70, BIG))]
 GATEHOUSE = box(GATE_S - 3, t_north(GATE_S) - 14, GATE_S + 3, t_north(GATE_S) - 4)
-VALLEY_PARK = BUILDABLE.intersection(box(VALLEY_ST_S[1], -5, EAST_ISLAND_S, BIG))
-SPORTS = box(668, 128, 706, 168).intersection(VALLEY_PARK)
+SPORTS = parcel(823, BIG, 100, BIG, ISLAND)  # sports ground next to the secondary school
 LOTS = unary_union(villas + houses)
-USED = unary_union([LOTS, ALL_ROADS, PARK, VALLEY_PARK, ORCHARD, unary_union(list(SERVICES.values())), TOWER_ZONE])
+USED = unary_union([LOTS, ALL_ROADS, PARK, SPORTS, ORCHARD, unary_union(list(SERVICES.values())), TOWER_ZONE])
 BUFFERS = SITE.difference(USED)  # north green belt, verges, sidewalks and planting strips
 
 # indicative footprints: villa 12 x 10 m (30 %) with 4 m front setback, house 10 x 12 m (60 %) with 2.5 m
