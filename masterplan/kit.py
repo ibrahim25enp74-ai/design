@@ -27,7 +27,8 @@ MAIN_ROADS = ("blvd", "collector", "gate", "public")
 WADI_HALF = 20.0                                        # assumed flood corridor: 20 m each side
 
 SERVICES = {   # name: (area m2, arabic label, kind)
-    "kg": (3600, "روضة وحضانة", "edu"),
+    "kg": (1800, "روضة وحضانة 1", "edu"),
+    "kg2": (1800, "روضة وحضانة 2", "edu"),
     "prim": (7700, "مدرسة ابتدائية", "edu"),
     "inter": (4800, "مدرسة متوسطة", "edu"),
     "prep": (4100, "مدرسة إعدادية", "edu"),
@@ -99,6 +100,23 @@ def band_mid(ds, dn, x0=-100, x1=1000):
 
 def band_edge(edge, d0, d1, x0=-100, x1=1000):
     return EDGES[edge].band(d0, d1, x0, x1).intersection(SITE)
+
+
+def rib(x, d_n, d_s, edge="n"):
+    """Cross street along the normal of an edge at local x, from d_n off the north edge to d_s off the south."""
+    e = EDGES[edge]
+    s = e.s_at_x(x, 0)
+    far = LineString([e.pt(s, -50), e.pt(s, 450)])
+    a = far.intersection(NORTH.line(d_n, -200, 1100))
+    b = far.intersection(SOUTH.line(d_s, -200, 1100))
+    return LineString([(a.x, a.y), (b.x, b.y)])
+
+
+def ncut(x0, x1, edge="n"):
+    """Slice of the site between two lines normal to an edge, at local x0 and x1."""
+    e = EDGES[edge]
+    s0, s1 = e.s_at_x(x0, 0), e.s_at_x(x1, 0)
+    return Polygon([e.pt(s0, -60), e.pt(s1, -60), e.pt(s1, 460), e.pt(s0, 460)]).intersection(SITE)
 
 
 def xcut(x0, x1, y0=-50, y1=400):

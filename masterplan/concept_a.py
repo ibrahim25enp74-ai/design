@@ -1,88 +1,84 @@
 """Concept A - the spine. Driver: movement efficiency and phasing.
 
-One 24 m boulevard on the plot's centreline carries every trip, every utility trunk and the civic
-node at its midpoint; housing rows run parallel to the two long edges and hang off it through
-short ribs. The cross road stays public (no approval risk) and becomes the gate frontage.
-"""
-from shapely.geometry import LineString, Polygon, box
+One 24 m boulevard carries every trip and every utility trunk, with the civic "high street" at
+its midpoint (Soria y Mata's linear city at neighbourhood scale). The boulevard runs parallel to
+the north edge, so the north residential band is one continuous stack of rows with no waste; the
+plot's 10 deg taper is taken entirely by the south band, which is wide in the west (more housing
+rows) and narrow in the east (schools, utilities and the park take that narrow end).
 
+The cross road stays public: the towers and the public-facing services sit west of it in the
+grove, so 152 apartments and all outside visitors never enter the gated low-rise streets, and
+phase 1 needs no internal road at all.
+"""
 import kit
 import plot157 as P
-from kit import NORTH, SOUTH, SITE, xcut
+from kit import ncut
 
-
-def yc(x):
-    return (kit.SOUTH.pt(kit.SOUTH.s_at_x(x, 0), 0)[1] + kit.NORTH.pt(kit.NORTH.s_at_x(x, 0), 0)[1]) / 2
+SPINE_D = 105.0             # spine centreline, metres off the north edge
+X_GATE = 112.0              # main gate on the cross road, at the head of the spine
+CIVIC = (376.0, 540.0)      # civic high street between two collector ribs
 
 
 def build():
     p = kit.Plan("A", "The Spine", "المحور")
-    W = kit.west_of_cross(5)          # everything west of the public cross road
+    W = kit.west_of_cross(5)
     wadi = kit.wadi_corridor()
     E = kit.east_of_wadi()
-    xr = kit.cross_road()
+    N = kit.NORTH
 
     # ------------------------------------------------ movement
-    x_gate = 116.6 + 7
-    x_end = 700.0
-    spine = LineString([(x_gate - 8, yc(x_gate)), (x_end, yc(x_end))])
-    p.road_line(spine, "blvd", "boulevard")
-    p.road_line(P.ROAD_X_L, "public", "public cross road")        # kept public, 10 m
-    # ribs: short cross streets from the spine to the edge-parallel local streets
-    for x in (232, 340, 548):
-        p.road([(x, kit.edge_y_s(x) + 30), (x, kit.edge_y_n(x) - 30)], "local")
-    # east of the wadi: bridge continues as the east loop
-    p.gate(x_gate, yc(x_gate), "main")
-    p.gate(620, kit.edge_y_s(620), "service")
+    p.road_line(N.line(SPINE_D, X_GATE - 30, 708), "blvd", "boulevard")
+    p.road_line(P.ROAD_X_L, "public", "public cross road")
+    p.road_line(kit.rib(CIVIC[0] - 8, 28, 28), "collector")
+    p.road_line(kit.rib(CIVIC[1] + 8, 28, 28), "collector")
+    p.road_line(kit.rib(250, 28, 28), "local")
+    p.road_line(kit.rib(708, 28, 28), "local")
+    p.road_line(kit.rib(846, 28, 28), "local")
+    gx, gy = N.pt(N.s_at_x(X_GATE, SPINE_D), SPINE_D)
+    p.gate(gx, gy, "main")
+    p.gate(600, kit.edge_y_s(600), "service")
 
-    # ------------------------------------------------ west of the cross road: public frontage
-    p.service("cd", kit.rect_c(118, 40, 46, 44, -10.9).intersection(W))
-    p.service("police", kit.rect_c(104, 80, 34, 36, -10.9).intersection(W))
-    p.service("prep", kit.rect_c(88, 128, 52, 80, -10.9).intersection(W))
-    p.service("power", kit.rect_c(14, 20, 50, 50).intersection(W))
-    p.service("club", kit.rect_c(70, 238, 62, 66, -10.9).intersection(W))
-    p.parcel("sports", kit.rect_c(10, 270, 40, 40).intersection(W), "sports", "ملعب")
-    p.parcel("grove", W, "park", "حديقة البستان (الأشجار القائمة)")
+    # ------------------------------------------------ west of the cross road: towers in the grove, public services
+    p.parcel("tower_zone", W.intersection(kit.band_mid(112, 0)), "tower_zone", "منطقة البرجين")
+    p.tower(22, 236)
+    p.tower(40, 170)
+    p.service("power", kit.edge_rect("s", -2, 40, 6, 40))
+    p.service("police", kit.edge_rect("s", 38, 34, 6, 40))
+    p.service("cd", kit.edge_rect("s", 72, 52, 6, 40))
+    p.service("prep", kit.edge_rect("s", 6, 60, 50, 62))
+    p.service("club", kit.edge_rect("s", 66, 56, 50, 62))
+    p.parcel("grove", W, "park", "حديقة البستان")
 
-    # ------------------------------------------------ towers flank the gate
-    tz = xcut(0, 222).difference(W).difference(xr.buffer(0.1))
-    p.parcel("tower_zone", tz, "tower_zone", "منطقة البرجين")
-    p.tower(178, 232)
-    p.tower(178, 74)
-
-    # ------------------------------------------------ civic node at the midpoint
-    xm = 440
-    p.service("market", kit.rect_c(xm, yc(xm) + 40, 70, 50))
-    p.service("mosque", kit.rect_c(xm + 55, yc(xm) + 37, 40, 40))
-    p.service("health", kit.rect_c(xm - 57, yc(xm) + 37, 40, 40))
-    p.service("admin", kit.rect_c(xm - 95, yc(xm) + 32, 32, 34))
-    p.service("prim", kit.rect_c(xm - 35, yc(xm) - 50, 110, 74))
-    p.service("inter", kit.rect_c(xm + 80, yc(xm) - 50, 66, 74))
-    p.service("kg", kit.rect_c(xm - 125, yc(xm) - 50, 50, 74))
-
-    # ------------------------------------------------ park at the spine's end, utilities by the wadi
-    p.service("water", kit.edge_rect("s", 596, 44, 6, 58))
-    p.service("sewage", kit.edge_rect("s", 640 - 4, 30, 6, 50).difference(wadi))
+    # ------------------------------------------------ civic high street: shops north, schools south
+    spine_s = kit.band_mid(0, SPINE_D + 12)          # everything south of the spine
+    p.service("admin", kit.edge_rect("n", CIVIC[0], 20, 40, 53))
+    p.service("market", kit.edge_rect("n", CIVIC[0] + 20, 66, 40, 53))
+    p.service("mosque", kit.edge_rect("n", CIVIC[0] + 86, 32, 40, 53))
+    p.service("health", kit.edge_rect("n", CIVIC[0] + 118, 32, 40, 53))
+    p.service("kg2", ncut(CIVIC[0], CIVIC[0] + 22).intersection(spine_s).intersection(kit.band_edge("s", 6, 200)))
+    p.service("prim", ncut(CIVIC[0] + 22, CIVIC[0] + 102).intersection(spine_s).intersection(kit.band_edge("s", 6, 200)))
+    p.service("inter", ncut(CIVIC[0] + 102, CIVIC[1]).intersection(spine_s).intersection(kit.band_edge("s", 6, 200)))
+    p.service("kg", ncut(150, 178).intersection(spine_s).intersection(kit.band_edge("s", 95, 200)))
+    p.service("water", kit.edge_rect("s", 604, 38, 3, 66))
+    p.service("sewage", kit.edge_rect("s", 642, 26, 3, 66).difference(wadi.buffer(2)))
     p.parcel("wadi", wadi, "wadi", "حديقة الوادي")
-    park = xcut(565, 700).difference(wadi).difference(E).intersection(
-        kit.band_mid(48, 48))
-    p.parcel("shallalat", park, "park", "حديقة الشلالات")
+    p.parcel("shallalat", ncut(604, 708).intersection(spine_s).difference(wadi).difference(kit.band_edge("s", 0, 69)), "park", "حديقة الشلالات")
 
-    # ------------------------------------------------ housing, rows parallel to each long edge
-    x0, x1 = 222, 640
-    rn, _ = p.strip_rows("n", ["buf:6", "V+", "S", "D-", "D+", "S", "D-"], x0, 655)
-    rs, _ = p.strip_rows("s", ["buf:6", "V+", "S", "D-", "D+", "S", "D-"], x0, 600)
-    p.res(xcut(x0, 700).difference(wadi).difference(E), rn + rs)
-    # east of the wadi: four villa rows around a green court
-    en, _ = p.strip_rows("n", ["buf:6", "V+", "S", "V-"], 690, 860, street_ext=0)
-    es, _ = p.strip_rows("s", ["buf:6", "V+", "S", "V-"], 700, 845, street_ext=0)
-    p.road([(705, kit.edge_y_s(705) + 30), (690, kit.edge_y_n(690) - 30)], "local")
-    p.res(E, en + es)
+    # ------------------------------------------------ housing
+    rn, _ = p.strip_rows("n", ["buf:3", "V+", "S", "V-", "D+", "L"], 60, 708)
+    p.res(ncut(60, 708).intersection(kit.band_edge("n", 0, SPINE_D)).difference(W).difference(wadi), rn)
+    rs, _ = p.strip_rows("s", ["buf:3", "V+", "S", "D-", "D+", "S", "D-", "D+", "L"], 140, CIVIC[0] - 8)
+    p.res(ncut(60, CIVIC[0] - 8).intersection(spine_s).difference(W), rs)
+    gs, _ = p.strip_rows("s", ["buf:3", "D+", "S", "D-"], CIVIC[1] + 8, 604)
+    p.res(ncut(CIVIC[1] + 14, 604).intersection(spine_s), gs)
+    fn, _ = p.strip_rows("n", ["buf:3", "V+", "S", "D-", "D+", "L"], 708, 846)
+    fs, _ = p.strip_rows("s", ["buf:3", "V+", "S", "D-"], 708, 846)
+    p.res(E, fn + fs)
 
-    p.section_x = 178
+    p.section_x = 300
     p.phases = [
-        {"poly": W.union(tz), "label": "المرحلة 1: البوابة والبرجان والخدمات العامة"},
-        {"poly": xcut(222, 560).difference(W), "label": "المرحلة 2: المحور والمركز الخدمي والسكن"},
-        {"poly": xcut(560, 900), "label": "المرحلة 3: الحديقة والوادي والطرف الشرقي"},
+        {"poly": W, "label": "1: البرجان والخدمات العامة غرب الشارع العرضي (بلا طرق داخلية)"},
+        {"poly": ncut(60, CIVIC[1]).difference(W), "label": "2: البوابة والمحور والمركز الخدمي والسكن الغربي"},
+        {"poly": ncut(CIVIC[1], 900), "label": "3: السكن الشرقي وحديقة الشلالات والوادي"},
     ]
     return p.build()
