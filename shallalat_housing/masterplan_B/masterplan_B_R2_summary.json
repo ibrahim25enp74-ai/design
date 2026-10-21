@@ -1,0 +1,34 @@
+{
+ "villas": 80,
+ "houses": 88,
+ "apartments": 240,
+ "units": 408,
+ "persons": 2208,
+ "site_m2": 199177,
+ "park_m2": 16257,
+ "green_m2_per_person": 31.2,
+ "density_pph": 111,
+ "landuse": {
+  "Villa lots (80 x 400 m2) - قطع الفلل": 32000,
+  "House lots (88 x 240 m2) - قطع الدور": 21120,
+  "Tower plaza (3 towers, 240 apts) - بلازا الأبراج": 13166,
+  "Services & utilities - الخدمات والبنى التحتية": 19000,
+  "Central park (oval) - الحديقة المركزية البيضوية": 16257,
+  "Orchard green - البستان": 3000,
+  "Pocket gardens, east park, belts & verges - حدائق جيرة وحزام أخضر وأرصفة مزروعة": 49668,
+  "Roads (ring, boulevard, avenue, local) - الطرق": 44966
+ },
+ "services": {
+  "MOSQUE - جامع": 2000,
+  "HEALTH CENTRE - مركز صحي": 1000,
+  "CIVIL DEFENCE - دفاع مدني": 600,
+  "POLICE - مركز شرطة": 600,
+  "MALL - مول": 3000,
+  "KINDERGARTEN - روضة": 1500,
+  "PRIMARY SCHOOL - مدرسة ابتدائية": 3000,
+  "SECONDARY SCHOOL - ثانوية (متوسطة وإعدادية)": 5000,
+  "POWER STATION - محطة كهرباء": 1000,
+  "WATER STATION - محطة ماء": 1000,
+  "WASTE POINT - نقطة نفايات": 300
+ }
+}
