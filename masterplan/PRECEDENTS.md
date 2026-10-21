@@ -38,6 +38,26 @@
 - رياح الشمال الغربي (الشمال) صيفية مغبرة، والموصل كثيرة الأيام الهادئة (46% في تموز)، فالأولوية للتظليل لا لتوجيه الرياح: [دليل بلاد الرافدين 1918](https://qdl.qa/en/archive/81055/vdc_100023472673.0x000031) · [AGU](https://agu.confex.com/agu/fm14/webprogram/Paper16414.html)
 - لا يوجد معيار موحّد لإشراف الأبراج على البيوت (مثال: 21 م بين النوافذ المتقابلة فوق 6 طوابق في إرشادات بريطانية)، فيُقاس الإشراف لكل مقترح: [Bexley](https://www.bexley.gov.uk/services/planning-and-building-control/planning-policy-and-guidance/supplementary-planning-documents-and-guidance/design-guide-supplementary-planning-document-dev/spatial-quality-outlook-and-privacy) · [Auckland](https://www.aucklanddesignmanual.co.nz/sites-and-buildings/apartments/guidance/placing-the-building/building-separation-and-outlook)
 
+## صفحات المشاريع في المواقع المعمارية (ArchDaily وأمثاله)
+
+| المشروع | الموقع | ما يُؤخذ منه | يخدم | الرابط |
+|---|---|---|---|---|
+| KAPSARC Housing / HOK | الرياض | وادٍ جاف صار حديقة طولية وواحة، الخدمات والجامع في القلب، 191 فيلا | ب، ج | [ArchDaily](https://www.archdaily.com/614598/kapsarc-housing-hok) |
+| Lafayette Park / Mies + Hilberseimer + Caldwell | ديترويت | برجان بـ 22 طابقاً وبيوت متلاصقة من طابقين في حديقة 13 فداناً، بلوك كبير | ب | [ArchDaily](https://www.archdaily.com/455524/ad-classics-lafayette-park-mies-van-der-rohe) · [Dezeen](https://www.dezeen.com/2020/04/27/mies-van-der-rohe-lafayette-park-detroit-photographs/) |
+| Masdar City | أبوظبي | شوارع ضيقة موجّهة للتظليل، أحياء المرحلة 2 بجوامع ومدارس | كل المقترحات | [Inside Masdar](https://www.archdaily.com/517456/inside-masdar-city) · [Phase 2 / CBT](https://www.archdaily.com/873748/construction-underway-on-masdar-citys-community-oriented-phase-2-masterplan) |
+| The Sustainable City (مدرسة CEBRA + SLA) | دبي | تجمعات فلل حول عمود أخضر، طاقة شمسية ومياه معالجة | ج، د | [ArchDaily](https://www.archdaily.com/788309/cebra-design-school-for-the-sustainable-city-in-dubai) |
+| Tilal Al Ghaf | دبي | 16 حياً لكل منه شخصية، ممرات مظللة وحدائق وبحيرة مركزية، أشجار الغاف المحلية | ب، د | [WLA](https://worldlandscapearchitect.com/tilal-al-ghaf-a-landscape-rooted-in-context-and-community/) |
+| Jebel Ali Racecourse / BIG | دبي | حديقة مركزية تربط أحياء قابلة للمشي | ب | [ArchDaily](https://www.archdaily.com/1030091/big-presents-masterplan-to-turn-the-jebel-ali-racecourse-in-dubai-into-a-green-walkable-district) |
+| Al Falah Housing (ضمن أمثلة المخطط الشعاعي) | أبوظبي | مخطط إسكان شعاعي حول مركز | ب | [ArchDaily](https://www.archdaily.com/951587/radial-city-plan-nine-examples-around-the-world-seen-from-above) |
+| Madinat Al Irfan / Allies and Morrison | مسقط | مدينة حول وادٍ صار حديقة، قرى ونجوع سكنية هادئة على الطرف | ج، د | [Dezeen](https://www.dezeen.com/2017/11/27/allies-morrison-challenge-identikit-urbanism-masterplan-new-city-oman-madinat-al-irfan/) · [ArchDaily](https://www.archdaily.com/587674/allies-and-morrison-to-masterplan-new-city-district-in-oman) |
+| Wadi Hanifa Wetlands / Moriyama & Teshima + Buro Happold | الرياض | إعادة تأهيل الوادي، جائزة الآغا خان 2010 | ج | [ArchDaily](https://www.archdaily.com/92244/winners-of-the-2010-aga-kahn-award-for-architecture) · [Archnet](https://www.archnet.org/sites/4458) |
+| King Salman Park | الرياض | حديقة منظمة على شبكة أودية متفرعة | ج | [ArchDaily](https://www.archdaily.com/1038859/king-salman-park-advances-toward-2026-opening-on-former-riyadh-airbase) |
+| Expo 2030 Riyadh | الرياض | أودية معاد تفعيلها كشبكة فضاءات تبريد | ج | [ArchDaily](https://www.archdaily.com/1031300/expo-2030-riyadh-unveils-first-details-of-its-masterplan) |
+| Al Fay Park / SLA | أبوظبي | أكثر من 2,000 شجرة وشجيرة محلية للتبريد | ج | [ArchDaily](https://www.archdaily.com/960284/al-fay-park-sla) · [Landezine](https://landezine.com/al-fay-park-by-sla/) |
+| Budoor Residential Complex / Manhal Habbobi | بغداد | 8,000 بيت بمساحات 200–400 م²، شبكة متعامدة للسكن ومبانٍ عالية كمعلم | أ | [e-architect](https://www.e-architect.com/iraq/budoor-residential-complex-baghdad-iraq) · [Archello](https://archello.com/news/progressive-urban-neighbourhood-concept-by-manhal-habbobi-consultants-breaks-ground-in-iraq) |
+| Pavilion by Rams | أربيل | 170 هكتار، فلل وأبراج حول بحيرة صناعية | د | [Archello](https://archello.com/project/pavilion-by-rams) |
+| Msheireb Downtown Doha | الدوحة | شوارع مبرّدة طبيعياً بمقياس إنساني | كل المقترحات | [ArchDaily](https://www.archdaily.com/966087/msheireb-downtown-doha-masterplan-allies-and-morrison-plus-aecom-plus-arup) |
+
 ## أثر السوابق على المقترحات
 
 | المقترح | السوابق |
