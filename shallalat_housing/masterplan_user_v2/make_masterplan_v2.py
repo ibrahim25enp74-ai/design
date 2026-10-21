@@ -13,6 +13,7 @@ from ezdxf.enums import TextEntityAlignment
 
 from layout_v2 import *  # noqa: F401,F403  (geometry of the layout)
 from landscape_v2 import LANDSCAPE, PLAZA_LS
+import circulation_v2 as C
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROT = math.degrees(math.atan2(U[1], U[0]))
@@ -23,7 +24,7 @@ NAMES = {
     "MALL": ("MALL", "المول"), "MOSQUE": ("MOSQUE", "الجامع"),
     "POLICE": ("POLICE", "الشرطة"), "CIVIL_DEF": ("CIVIL DEFENCE", "الدفاع المدني"), "HEALTH": ("HEALTH CENTRE", "المركز الصحي"),
     "SECONDARY": ("SECONDARY SCHOOL", "الثانوية (متوسطة + إعدادية)"), "PRIMARY": ("PRIMARY SCHOOL", "المدرسة الابتدائية"),
-    "KG": ("KINDERGARTEN", "الروضة"), "WATER": ("WATER STATION", "محطة الماء"), "POWER": ("POWER STATION", "محطة الكهرباء"),
+    "KG": ("KINDERGARTEN", "الروضة"), "KG_W": ("KINDERGARTEN (W)", "الروضة الغربية"), "WATER": ("WATER STATION", "محطة الماء"), "POWER": ("POWER STATION", "محطة الكهرباء"),
     "WASTE": ("WASTE", "النفايات"), "CLUB": ("SOCIAL CLUB + SPORTS", "النادي والملاعب"),
     "PARK_MALL": ("PARKING", "موقف السيارات"), "G_SCHOOL": ("GARDEN", "حديقة"), "G_SEC": ("GARDEN", "حديقة"), "G_HEALTH": ("GARDEN", "حديقة"),
 }
@@ -61,7 +62,12 @@ LAYERS = {
     "MP_TEXT": (7, 18), "MP_TEXT_PLOTNO": (8, 9), "MP_TABLE": (7, 18), "MP_NORTH": (7, 25),
     "MP_HATCH_RES": (31, 0), "MP_HATCH_SERV": (1, 0), "MP_HATCH_GREEN": (3, 0), "MP_HATCH_ROAD": (252, 0),
     "MP_HATCH_TOWER": (5, 0), "MP_LANDSCAPE": (94, 13), "MP_GARDEN_PATH": (41, 13), "MP_GARDEN_BEDS": (84, 13), "MP_TREES": (3, 13), "MP_HATCH_LANDSCAPE": (94, 0),
+    "MP_CIRC_VEH_COLLECTOR": (250, 50), "MP_CIRC_VEH_LOCAL": (8, 35), "MP_CIRC_VEH_ACCESS": (9, 18),
+    "MP_CIRC_PED_GREENWALK": (3, 50), "MP_CIRC_PED_LINK": (94, 25), "MP_CIRC_SERVICE": (200, 35),
+    "MP_CIRC_EMERGENCY": (1, 35), "MP_CROSSINGS": (7, 18), "MP_DROPOFF": (40, 18),
 }
+CIRC_LT = {"MP_CIRC_VEH_ACCESS": "DASHED", "MP_CIRC_PED_GREENWALK": "DASHED2", "MP_CIRC_PED_LINK": "DOT",
+           "MP_CIRC_SERVICE": "DASHDOT", "MP_CIRC_EMERGENCY": "DIVIDE"}
 # the architect's own colours
 FILL = {
     "villa": (254, 204, 102), "house": (242, 103, 34), "serv": (237, 31, 36), "util": (209, 156, 199),
@@ -80,7 +86,9 @@ def write_dxf(path):
     doc.header["$INSUNITS"] = 6
     doc.styles.add("AR", font="arial.ttf")
     for n, (c, lw) in LAYERS.items():
-        doc.layers.add(n, color=c, lineweight=lw if lw else -3)
+        lay = doc.layers.add(n, color=c, lineweight=lw if lw else -3)
+        if n in CIRC_LT and CIRC_LT[n] in doc.linetypes:
+            lay.dxf.linetype = CIRC_LT[n]
     msp = doc.modelspace()
 
     def outline(g, layer):
@@ -155,6 +163,21 @@ def write_dxf(path):
         outline(g, "MP_UTILITIES" if k in UTIL_KEYS else "MP_SERVICES")
     msp.add_lwpolyline([utm(q) for q in GATE.coords], dxfattribs={"layer": "MP_GATES"})
     msp.add_lwpolyline([utm(q) for q in SGATE.coords], dxfattribs={"layer": "MP_GATES"})
+    # circulation: one centre line per route on its own layer
+    for lay, lines in (("MP_CIRC_VEH_COLLECTOR", C.COLLECTORS + [C.GATE_IN, C.SGATE_IN]), ("MP_CIRC_VEH_LOCAL", C.LOCALS),
+                       ("MP_CIRC_VEH_ACCESS", C.ACCESS), ("MP_CIRC_PED_GREENWALK", [C.GREEN_WALK]),
+                       ("MP_CIRC_PED_LINK", C.PED_LINKS), ("MP_CIRC_SERVICE", C.SERVICE),
+                       ("MP_CIRC_EMERGENCY", [C.EMERGENCY, C.CD_OUT])):
+        for ln in lines:
+            msp.add_lwpolyline([utm(q) for q in ln.coords], dxfattribs={"layer": lay, "ltscale": 0.5})
+    for g in C.CROSSINGS:
+        outline(g, "MP_CROSSINGS")
+        for x_ in np.arange(g.bounds[0] + 1.0, g.bounds[2] - 0.5, 1.5):
+            msp.add_lwpolyline([utm((x_, g.bounds[1])), utm((x_, g.bounds[3]))], dxfattribs={"layer": "MP_CROSSINGS"})
+    for g in C.DROPOFFS:
+        hatch(g, "MP_DROPOFF", FILL["play"])
+        outline(g, "MP_DROPOFF")
+    text("RAISED CROSSING - معبر مشاة مرتفع", (C.CROSSINGS[2].centroid.x, C.CROSSINGS[2].centroid.y + 6), 1.8)
 
     for i, p in enumerate(VILLAS):
         text(f"V{i + 1:02d}", tuple(p.centroid.coords[0]), 1.6, layer="MP_TEXT_PLOTNO")
@@ -288,6 +311,12 @@ def write_preview(png, pdf):
     f(SITE, None, ec="#c00", lw=1.6, z=6)
     for g in (GATE, SGATE):
         ax.plot(*g.xy, color="#d00", lw=5, zorder=7, solid_capstyle="butt")
+    for g in C.CROSSINGS:
+        f(g, "ls_pave", ec="#666", lw=0.4, z=5)
+        for x_ in np.arange(g.bounds[0] + 1.0, g.bounds[2] - 0.5, 1.6):
+            ax.plot([x_, x_], [g.bounds[1] + 0.4, g.bounds[3] - 0.4], color="white", lw=1.6, zorder=5.1)
+    for g in C.DROPOFFS:
+        f(g, "play", ec="#975", lw=0.4, z=5)
 
     for k, g in {**SERV, **OPEN}.items():
         q = g.representative_point()
@@ -379,17 +408,176 @@ def write_preview(png, pdf):
         "شوارع عرضية 12 م بين الأحياء، وممرات داخلية 10 م، والشارعان الطويلان 14 م.",
         "نهايات الصفوف المطلة على الحديقة صارت مداخل خضراء للحديقة من الشارع العرضي.",
         "المحور المدني مقابل البوابة الرئيسية: مول وموقفه، ساحة مدنية،",
-        "صحي 1000، شرطة 600، دفاع مدني 600، جامع 2000 وسط حديقته، روضة 1500، ابتدائية 3000.",
-        "الطرف الشرقي: الثانوية 5000، النادي والملاعب 5000، الماء والكهرباء والنفايات،",
-        "عند بوابة الخدمة على الشارع الجنوبي، والباقي حديقة شرقية.",
+        "صحي 1000، شرطة 600 ودفاع مدني 600 على الشارع الشمالي، جامع 2000 وسط حديقته، ابتدائية 3000.",
+        "روضتان 750 + 750 (غربية للأبراج والحي 1، ووسطية) حتى لا يبعد بيت أكثر من ~350 م عن روضة.",
+        "الطرف الشرقي: الثانوية 5000 ومرافق الماء والكهرباء والنفايات عند بوابة الخدمة، والباقي حديقة (أُلغي النادي).",
+        "ممر أخضر متصل 810 م يربط البلازا بكل الحدائق والمحور المدني، و6 معابر مشاة مرتفعة.",
         "البلازا: نزول عند الشارع العرضي، نافورة، ممشيان بقناة ماء ونخيل بين الأبراج.",
         f"موقف سرداب تحت البلازا لـ {PARK_NEED} سيارة (1.5 لكل شقة)، منحدر في الزاوية الجنوبية.",
         "الحدائق على أسلوب الصورة المرجعية: مسار ملون بزوايا، مسطحات مضلعة، ساحات مبلطة، رصيف خشبي.",
         "مدخلان فقط: رئيسي شمالا وخدمة جنوبا، ولا شوارع على الضلعين القصيرين.",
-        "Layers MP_*; colours follow the architect's sketch.",
+        "مخطط الحركة والعلاقات في لوحة منفصلة. Layers MP_*, circulation on MP_CIRC_*.",
     ]
     for i, n in enumerate(notes):
         nt.text(1, 1 - i * 0.064, n, fontsize=10.5, ha="right", va="top", transform=nt.transAxes)
+    fig.savefig(png, dpi=110)
+    fig.savefig(pdf)
+
+
+def write_circulation(png, pdf):
+    """Sheet 2: circulation and relationships - zones in pale colours, routes on top, distance matrix."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.path import Path
+    from matplotlib.patches import PathPatch, FancyArrowPatch
+
+    fig = plt.figure(figsize=(33.1, 23.4))
+    ax = fig.add_axes([0.02, 0.30, 0.96, 0.64])
+    rgb = {k: tuple(c / 255 for c in v) for k, v in FILL.items()}
+
+    def f(g, key, alpha=0.35, ec="#999", lw=0.3, z=1):
+        for p in polys(g):
+            verts, codes = [], []
+            for ring in [p.exterior] + list(p.interiors):
+                c = list(ring.coords)
+                verts += c
+                codes += [Path.MOVETO] + [Path.LINETO] * (len(c) - 2) + [Path.CLOSEPOLY]
+            ax.add_patch(PathPatch(Path(verts, codes), fc=rgb[key] if key else "none", ec=ec, lw=lw, zorder=z,
+                                   alpha=alpha))
+
+    def line(ln, color, lw, ls="-", z=5):
+        ax.plot(*ln.xy, color=color, lw=lw, ls=ls, zorder=z, solid_capstyle="round", dash_capstyle="round")
+
+    def t(s, at, size=8, w="normal", color="#111", z=10):
+        ax.text(at[0], at[1], s, fontsize=size, ha="center", va="center", fontweight=w, color=color, zorder=z,
+                linespacing=1.1, bbox=dict(boxstyle="round,pad=0.25", fc="white", ec="none", alpha=0.85))
+
+    f(ROADS, "road", 0.6)
+    for p in VILLAS:
+        f(p, "villa", 0.35, ec="none")
+    for p in HOUSES:
+        f(p, "house", 0.3, ec="none")
+    for g in GREEN_AREAS + BITS:
+        f(g, "park", 0.35, ec="none")
+    f(PLAZA_ALL, "plaza", 0.5, ec="none")
+    for tw in TOWERS:
+        f(tw, "tower", 0.6, ec="none")
+    for k, g in SERV.items():
+        f(g, "util" if k in UTIL_KEYS else "serv", 0.45, ec="#c66", lw=0.5)
+        q = g.representative_point()
+        ax.text(q.x, q.y, NAMES[k][1], fontsize=6.5, ha="center", va="center", zorder=9, color="#600")
+    f(SITE, None, 1, ec="#c00", lw=1.6, z=6)
+
+    COL = {"col": "#333333", "loc": "#777777", "acc": "#aaaaaa", "walk": "#1f9a3a", "link": "#7cc36a",
+           "serv": "#8e44ad", "emer": "#e01b24"}
+    for ln in C.COLLECTORS + [C.GATE_IN, C.SGATE_IN]:
+        line(ln, COL["col"], 5.5)
+    for ln in C.LOCALS:
+        line(ln, COL["loc"], 3.2)
+    for ln in C.ACCESS:
+        line(ln, COL["acc"], 1.8, "--")
+    line(C.EMERGENCY.parallel_offset(4.5, "left"), COL["emer"], 1.6, (0, (6, 2, 1, 2)), z=6)
+    line(C.CD_OUT, COL["emer"], 2.4, z=6)
+    for ln in C.SERVICE:
+        line(ln.parallel_offset(3.5, "right") if ln.length > 0 else ln, COL["serv"], 2.6, (0, (5, 2)), z=6.5)
+    line(C.GREEN_WALK, COL["walk"], 4.5, (0, (3, 1.5)), z=7)
+    for ln in C.PED_LINKS:
+        line(ln, COL["link"], 2.4, ":", z=7)
+    for g in C.CROSSINGS:
+        f(g, None, 1, ec="#1f9a3a", lw=1.4, z=8)
+    for g in C.DROPOFFS:
+        f(g, "play", 1, ec="#975", lw=0.8, z=8)
+    for g in (GATE, SGATE):
+        ax.plot(*g.xy, color="#d00", lw=7, zorder=9, solid_capstyle="butt")
+    t("البوابة الرئيسية\nMAIN GATE", (GATE_U, north_v(GATE_U) + 14), 10, "bold", "#b00")
+    t("بوابة الخدمة والطوارئ\nSERVICE / EMERGENCY GATE", (SGATE_U, -13), 9, "bold", "#b00")
+
+    # relationship arrows: each residential zone -> its kindergarten, the civic spine, the secondary school
+    sp = SERV["MOSQUE"].centroid
+    hubs = {"KG_W": SERV["KG_W"].centroid, "KG": SERV["KG"].centroid, "SP": sp, "SEC": SERV["SECONDARY"].centroid}
+    zones = {"Towers": PLAZA_ALL.centroid, "V1": PARKS["V1"].centroid, "V2": PARKS["V2"].centroid,
+             "H1": PARKS["H1"].centroid, "H2": PARKS["H2"].centroid}
+    links = [("Towers", "KG_W"), ("V1", "KG_W"), ("V2", "SP"), ("V1", "SP"), ("Towers", "SP"), ("H1", "SP"),
+             ("H2", "SP"), ("H1", "KG"), ("H2", "KG"), ("H2", "SEC"), ("H1", "SEC")]
+    for a, b in links:
+        pa, pb = zones[a], hubs[b]
+        ax.add_patch(FancyArrowPatch((pa.x, pa.y), (pb.x, pb.y), arrowstyle="-|>", mutation_scale=14,
+                                     connectionstyle="arc3,rad=0.18", color="#1d4f91", lw=1.2, alpha=0.7, zorder=8))
+    for z, lab in (("Towers", "الأبراج 240 شقة"), ("V1", "الحي 1: 40 فيلا"), ("V2", "الحي 2: 40 فيلا"),
+                   ("H1", "الحي 3: 58 دار"), ("H2", "الحي 4: 30 دار")):
+        t(lab, (zones[z].x, zones[z].y + 9), 10, "bold", "#1d4f91")
+    t("المحور المدني\nCIVIC SPINE", (sp.x, sp.y), 10, "bold", "#600")
+
+    ax.set_xlim(-80, 900)
+    ax.set_ylim(-25, 330)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    fig.text(0.5, 0.965, f"مخطط الحركة والعلاقات - {TITLE_AR}   |   CIRCULATION + RELATIONSHIPS - VARIANT 2",
+             ha="center", fontsize=26, fontweight="bold")
+    fig.text(0.5, 0.945, "مجمع الشلالات السكني - القطعة 157 م53 بايبوخت - فرصة هيئة استثمار نينوى 5/2026", ha="center", fontsize=15)
+
+    # legend
+    lg = fig.add_axes([0.03, 0.02, 0.27, 0.26])
+    lg.axis("off")
+    items = [(COL["col"], 5.5, "-", "Collector road 14 m (north + south)", "شارع تجميعي 14 م"),
+             (COL["loc"], 3.2, "-", "Cross street 12 m", "شارع عرضي محلي 12 م"),
+             (COL["acc"], 1.8, "--", "Quarter lane 10 m (access only)", "ممر خدمة الحي 10 م"),
+             (COL["walk"], 4.5, (0, (3, 1.5)), "Green walk through all parks", "الممر الأخضر للمشاة"),
+             (COL["link"], 2.4, ":", "Pedestrian links to services", "روابط المشاة للخدمات"),
+             (COL["serv"], 2.6, (0, (5, 2)), "Service vehicles", "حركة الخدمة"),
+             (COL["emer"], 1.6, (0, (6, 2, 1, 2)), "Emergency ring + civil defence exit", "حلقة الطوارئ"),
+             ("#1d4f91", 1.2, "-", "Relationship: zone -> service it uses", "علاقة: الحي -> الخدمة")]
+    for i, (c, w, ls, en, ar) in enumerate(items):
+        y = 1 - i * 0.1
+        lg.plot([0, 0.12], [y, y], color=c, lw=w, ls=ls, transform=lg.transAxes)
+        lg.text(0.15, y, f"{en}  -  {ar}", fontsize=11, va="center", transform=lg.transAxes)
+    y = 1 - len(items) * 0.1
+    lg.add_patch(plt.Rectangle((0.0, y - 0.025), 0.12, 0.05, fc="none", ec="#1f9a3a", lw=1.4, transform=lg.transAxes))
+    lg.text(0.15, y, "Raised pedestrian crossing  -  معبر مشاة مرتفع", fontsize=11, va="center", transform=lg.transAxes)
+    y -= 0.1
+    lg.add_patch(plt.Rectangle((0.0, y - 0.025), 0.12, 0.05, fc=rgb["play"], ec="#975", transform=lg.transAxes))
+    lg.text(0.15, y, "School / KG drop-off lay-by  -  موقف إنزال المدارس", fontsize=11, va="center", transform=lg.transAxes)
+
+    # distance matrix
+    mx = fig.add_axes([0.33, 0.02, 0.38, 0.26])
+    mx.axis("off")
+    cols = list(next(iter(C.DIST.values())).keys())
+    mx.text(0, 1.0, "Walking distance from the farthest home (m)  -  مسافة المشي من أبعد بيت (م)", fontsize=12,
+            fontweight="bold", va="top")
+    for j, c in enumerate(cols):
+        en, ar = c.split(" - ")
+        mx.text(0.24 + j * 0.128, 0.88, f"{ar}\n{en}", fontsize=9, ha="center", va="top", fontweight="bold")
+    for i, (z, row) in enumerate(C.DIST.items()):
+        y = 0.72 - i * 0.1
+        en, ar = z.split(" - ")
+        mx.text(0, y, f"{ar}  {en}", fontsize=10.5, va="center")
+        for j, c in enumerate(cols):
+            d = row[c]
+            limit = 350 if "Kinder" in c else (500 if "Primary" in c or "Mosque" in c or "Own" in c else 800)
+            mx.text(0.24 + j * 0.128, y, f"{d:,.0f}", fontsize=10.5, ha="center", va="center",
+                    color="#1a7a2a" if d <= limit else "#c0392b", fontweight="bold", family="DejaVu Sans Mono")
+    mx.text(0, 0.12, "Green = within the target (KG 350, primary / mosque / park 500, others 800 m); "
+            "measured along the street grid.", fontsize=9.5, va="top")
+    mx.text(0, 0.05, "أخضر = ضمن الحد (روضة 350، ابتدائية وجامع وحديقة 500، الباقي 800 م)، مقاسة على شبكة الشوارع.",
+            fontsize=9.5, va="top")
+
+    nt = fig.add_axes([0.74, 0.02, 0.24, 0.26])
+    nt.axis("off")
+    notes = [
+        "هرمية الشوارع: تجميعي 14 م على الضلعين الطويلين، عرضي 12 م بين الأحياء،",
+        "وممرات 10 م للوصول فقط، فلا حركة عابرة داخل الأحياء.",
+        "الزوار والمول من البوابة الرئيسية مباشرة إلى الساحة المدنية، دون دخول الأحياء.",
+        "الخدمة من بوابة الخدمة على الشارع الجنوبي إلى المرافق والثانوية فقط.",
+        "الدفاع المدني والشرطة على الشارع الشمالي، وحلقة الطوارئ تصل كل قطعة.",
+        "الممر الأخضر 810 م: البلازا - حدائق الأحياء - حديقة الجامع - الحديقة الشرقية،",
+        "يعبر الشوارع العرضية بمعابر مرتفعة؛ الأطفال يمشون للمدارس داخل الحدائق.",
+        "مواقف إنزال للروضتين والابتدائية والثانوية خارج مسار السيارات.",
+        "الأبراج: نزول على الشارع العرضي الأول، منحدر السرداب في الزاوية الجنوبية،",
+        "وممشى البلازا يستمر عبر المعبر إلى حديقة الحي 1.",
+    ]
+    for i, n in enumerate(notes):
+        nt.text(1, 1 - i * 0.085, n, fontsize=11, ha="right", va="top", transform=nt.transAxes)
     fig.savefig(png, dpi=110)
     fig.savefig(pdf)
 
@@ -399,4 +587,5 @@ if __name__ == "__main__":
     base = os.path.join(out_dir, "SHALLALAT_MASTERPLAN_IBRAHIM_V2_QUARTERS")
     write_dxf(base + ".dxf")
     write_preview(base + "_preview.png", base + "_preview.pdf")
+    write_circulation(base + "_CIRCULATION.png", base + "_CIRCULATION.pdf")
     print("\n".join(table_rows()))

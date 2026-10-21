@@ -8,7 +8,7 @@ Same programme, presentation and colours as Ibrahim's developed proposal, differ
   (the south rows parallel to the south road, the north rows parallel to the north road), so the
   taper of the site is taken by the parks and not by the plots;
 - the daily services form a civic spine across the full width of the site, opposite the main gate;
-- the secondary school, the club and the utilities sit at the east end, by the service gate.
+- the secondary school and the utilities sit at the east end, by the service gate; the rest is the east park.
 
 Geometry is in the local frame used by the other proposals: u along the south edge Q1->Q4,
 v towards the north edge.
@@ -125,7 +125,7 @@ for name, w, kind, rows in QUARTERS:
     x += w
 CROSS.append((x, x + CROSS_W))
 EAST_START = x + CROSS_W
-SOUTH_ROAD_END = 815.0          # the south road goes on past the cross street to serve the east zone
+SOUTH_ROAD_END = 762.0          # the south road goes on past the cross street to the utilities
 
 INNER = SITE.intersection(sband(ROAD_W, 1e3)).intersection(nband(ROAD_W, 1e3))   # inside the two long roads
 
@@ -148,6 +148,8 @@ def south_rows(a, b, w, d, rows):
             row = [box(u0 + i * w, v, u0 + (i + 1) * w, v + d) for i in range(n)]
             out.append(row)
             bands.append(box(a, v, b, v + d))
+        else:
+            LANES.append(LineString([(a, v + h / 2), (b, v + h / 2)]))
         v += h
     return out, bands, v
 
@@ -171,11 +173,14 @@ def north_rows(a, b, w, d, rows):
                             npt(s0 + i * w, wv + d)]) for i in range(n)]
             out.append(row)
             bands.append(nband(wv, wv + d).intersection(box(a, -1e3, b, 1e3)))
+        else:
+            LANES.append(LineString([npt(-200, wv + h / 2), npt(1200, wv + h / 2)]).intersection(box(a, -1e3, b, 1e3)))
         wv += h
     return out, bands, wv
 
 
 ROWS = {}
+LANES = []           # centre lines of the quarter lanes
 for name, w, kind, rows in QUARTERS:
     if kind is None:
         continue
@@ -227,16 +232,20 @@ mid_band, south_band = cut(r, 5600, "v", "max")
 OPEN["PARK_MALL"], nb_ = cut(north_band, 1200, "u", "min")
 SERV["MALL"], nb_ = cut(nb_, 3000, "u", "min")
 FORECOURT, east_ = cut(nb_, 1600, "u", "min")
-SERV["HEALTH"], east_ = cut(east_, 1000, "v", "max")
-_pc, OPEN["G_HEALTH"] = cut(east_, 1200, "v", "min")
+# police and civil defence on the north road (straight out to the gate and the perimeter road), the health
+# centre below them on the cross street, its garden on the civic garden
+_pc, east_ = cut(east_, 1200, "v", "max")
 SERV["POLICE"], SERV["CIVIL_DEF"] = cut(_pc, 600, "u", "min")
+SERV["HEALTH"], OPEN["G_HEALTH"] = cut(east_, 1000, "v", "max")
 # middle: the mosque on the axis in the civic garden
 _mc = mid_band.centroid
 SERV["MOSQUE"] = box(_mc.x - 22.36, _mc.y - 22.36, _mc.x + 22.36, _mc.y + 22.36)
 CIVIC_GARDEN = clean(mid_band.difference(SERV["MOSQUE"]))
 # south: kindergarten and primary school on the quiet south road, their garden between them
-SERV["KG"], sb2 = cut(south_band, 1500, "u", "min")
-SERV["PRIMARY"], sb2 = cut(sb2, 3000, "u", "max")
+# the kindergarten is split in two of 750 m2 (same total) so no home is more than ~300 m from one:
+# one here for the middle quarters, one at the west end for the towers and quarter 1
+SERV["KG"], sb2 = cut(south_band, 750, "u", "max")
+SERV["PRIMARY"], sb2 = cut(sb2, 3000, "u", "min")
 OPEN["G_SCHOOL"] = sb2
 
 # --- tower zone at the west end ---------------------------------------------------------------------------
@@ -244,6 +253,8 @@ TZ = clean(SITE.intersection(box(-1e3, -1e3, TOWER_END, 1e3)))
 PLAZA_V = (62.0, 238.0)
 PLAZA_ALL = clean(TZ.intersection(box(-1e3, PLAZA_V[0], 1e3, PLAZA_V[1])))
 TOWER_PARK_S = clean(TZ.intersection(box(-1e3, -1e3, 1e3, PLAZA_V[0])))
+SERV["KG_W"] = box(TOWER_END - 28.0, 0.0, TOWER_END, 750.0 / 28.0)      # on the cross street, by the south road
+TOWER_PARK_S = clean(TOWER_PARK_S.difference(SERV["KG_W"]))
 TOWER_PARK_N = clean(TZ.intersection(box(-1e3, PLAZA_V[1], 1e3, 1e3)))
 TS = 31.5
 TOWER_C = [(36.0, 92.0), (20.0, 150.0), (36.0, 208.0)]    # staggered, so every tower sees the parks
@@ -289,9 +300,11 @@ _e = clean(EZ_.difference(_w))
 UT, _w = cut(_w, 2300, "v", "min")
 SERV["WATER"], ut = cut(UT, 1000, "u", "min")
 SERV["POWER"], SERV["WASTE"] = cut(ut, 1000, "u", "min")
-SERV["SECONDARY"], _w = cut(_w, 5000, "v", "min")
+# the secondary school at the top (entrance + drop-off on the last cross street); the garden between it and
+# the utilities carries the green walk on from quarter 4 to the east park
+SERV["SECONDARY"], _w = cut(_w, 5000, "v", "max")
 OPEN["G_SEC"] = _w
-SERV["CLUB"], EAST_PARK = cut(_e, 5000, "v", "min")
+EAST_PARK = _e                  # the club was dropped from the programme (client, 2026-10-21): its land is park
 UTILITIES = ("WATER", "POWER", "WASTE")
 
 # --- roads: what is left inside the site ------------------------------------------------------------------
