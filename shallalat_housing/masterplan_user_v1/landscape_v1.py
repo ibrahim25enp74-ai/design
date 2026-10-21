@@ -126,7 +126,8 @@ def design(poly, seed):
         else:
             out["shrub"].append(p)
     # shade trees along both long edges
-    edge = poly.buffer(-2.2, join_style="mitre").exterior if not poly.buffer(-2.2).is_empty else None
+    _in = polys(poly.buffer(-2.2, join_style="mitre"))
+    edge = max(_in, key=lambda p: p.area).exterior if _in else None
     if edge is not None:
         busy = unary_union(out["track"] + out["deck"]).buffer(2.0)
         for d in np.arange(0, edge.length, 11.0):

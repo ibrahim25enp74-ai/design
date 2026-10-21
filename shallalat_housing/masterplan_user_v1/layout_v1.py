@@ -139,31 +139,48 @@ SG_ROAD = box(SGATE_U - 6, -1, SGATE_U + 6, BELT + 1).intersection(SITE)
 GATE = LineString([(GATE_U - 10, north_v(GATE_U - 10) - 0.3), (GATE_U + 10, north_v(GATE_U + 10) - 0.3)])
 SGATE = LineString([(SGATE_U - 6, 0.3), (SGATE_U + 6, 0.3)])
 
-# --- villas: one row outside the ring, groups of six, pocket gardens between ------------------------
+# --- clusters' positions: the green fingers between them ----------------------------------------------
+# Rev 1: fingers 10 m wide (pitch 58); every finger lines up with a pocket garden in the villa row and a
+# zebra crossing on the ring, so each villa group walks straight through a finger to the central park.
+CL_PITCH = 58.0
+CL_W_START, CL_E_START = 150.0, 532.0
+_u_mid = [CL_W_START + CL_PITCH / 2 + CL_PITCH * k for k in range(4)]
+_u_east = [CL_E_START + CL_PITCH / 2 + CL_PITCH * k for k in range(3)]
+FINGER_U_S = [CL_W_START + CL_PITCH * k for k in range(5)] + [CL_E_START + CL_PITCH * k for k in range(4)]
+FINGER_U_N = [CL_W_START + CL_PITCH * k for k in range(5)]
+FINGER_T_N = [FN.t_of((u, north_v(u))) for u in FINGER_U_N]
+
+# --- villas: one row outside the ring, groups with pocket gardens between ------------------------------
 VW, GROUP, POCKET = 16.0, 6, 10.0
 VILLA_TARGET = 80
 NO_VILLA = unary_union([AXIS_N.buffer(4), SG_ROAD.buffer(4), box(SGATE_U - 6, -5, 900, 60)])
 
 
-def villa_row(frame, t0, t1):
+def villa_row(frame, t0, t1, pockets):
+    """Villas along an edge; a pocket garden at every finger and after at most GROUP + 1 villas."""
     out, t, k = [], t0, 0
     while t + VW <= t1:
         r = frame.rect(t, t + VW, 0.0, BELT)
+        hit = [c for c in pockets if t < c + POCKET / 2 and t + VW > c - POCKET / 2]
+        if hit:
+            t, k = hit[0] + POCKET / 2, 0
+            continue
         if r.difference(OUTER_BELT).area < 0.5 and not r.intersects(NO_VILLA):
             out.append(r)
             k += 1
             t += VW
-            if k % GROUP == 0:
-                t += POCKET
+            nxt = [c for c in pockets if c > t]
+            if k >= GROUP and not (nxt and nxt[0] - POCKET / 2 - t < VW * 1.5):
+                t, k = t + POCKET, 0
         else:
-            t += 1.0
-            k = 0 if k % GROUP == 0 else k
+            t, k = t + 1.0, 0
     return out
 
 
-_north = villa_row(FN, 30.0, FN.length - 20.0)
-_south = villa_row(FS, 30.0, FS.length)
+_north = villa_row(FN, 30.0, FN.length - 20.0, FINGER_T_N)
+_south = villa_row(FS, 30.0, FS.length, FINGER_U_S)
 VILLAS = (_north + _south)[:VILLA_TARGET]
+POCKET_T = {"N": FINGER_T_N, "S": FINGER_U_S}
 
 # --- houses: eleven cul-de-sac clusters of eight inside the ring --------------------------------------
 HW, HD, PER_SIDE, LANE = 12.0, 20.0, 4, 8.0
@@ -181,9 +198,8 @@ def cluster(frame, tc):
     return plots, lane, head
 
 
-CL_PITCH = 55.0
-CL_SOUTH_T = [150.0 + CL_PITCH / 2 + CL_PITCH * k for k in range(4)] + [535.0 + CL_PITCH / 2 + CL_PITCH * k for k in range(3)]
-CL_NORTH_T = [FN.t_of((u, north_v(u))) for u in [150.0 + CL_PITCH / 2 + CL_PITCH * k for k in range(4)]]
+CL_SOUTH_T = _u_mid + _u_east
+CL_NORTH_T = [FN.t_of((u, north_v(u))) for u in _u_mid]
 HOUSES, LANES, HEADS = [], [], []
 for fr, ts in ((FS, CL_SOUTH_T), (FN, CL_NORTH_T)):
     for tc in ts:
@@ -200,32 +216,58 @@ TOWERS = []
 for u in (566.0, 614.0, 662.0):
     tc = FN.t_of((u, north_v(u)))
     TOWERS.append(FN.rect(tc - TW_SIDE / 2, tc + TW_SIDE / 2, IN0 + 7.0, IN0 + 7.0 + TW_SIDE))
-PLAZA_ZONE = INNER.intersection(box(530.0, IN0 + CL_DEPTH + 6.0, 708.0, 400))
+PLAZA_ZONE = INNER.intersection(box(530.0, IN0 + CL_DEPTH + 6.0, 676.0, 400))
 PLAZA = clean(PLAZA_ZONE).difference(unary_union(TOWERS))
 
 # --- services ---------------------------------------------------------------------------------------
 SERV, OPEN = {}, {}
+_strip = INNER.difference(INNER.buffer(-3.5, join_style="mitre"))
+
+
+def layby(zone, length=40.0):
+    """Rev 1: a 3.5 m drop-off bay along the ring in front of a school / kindergarten."""
+    c = zone.centroid
+    bay = clean(_strip.intersection(zone).intersection(box(c.x - length / 2, -10, c.x + length / 2, 400)))
+    return bay, clean(zone.difference(bay.buffer(0.01)))
+
+
+LAYBYS = []
 _civ_free = INNER.difference(ROUNDABOUT.buffer(3)).difference(AXIS_N.buffer(3)).difference(AXIS_S.buffer(3))
+_civ_free = _civ_free.difference(CLUSTERS.buffer(5.0)).difference(PLAZA_ZONE.buffer(4.0))
 # civic core round the roundabout: daily services, each in its garden
 _nw = clean(_civ_free.intersection(box(370, RB_C[1], GATE_U, 400)))
 SERV["MALL"], r = cut(_nw, 3000, "v", "max")
 OPEN["PARK_MALL"], r = cut(r, 1200, "u", "min")
 OPEN["G_MALL"] = r
-_ne = clean(_civ_free.intersection(box(GATE_U, RB_C[1], 530, 400)))
+_ne = clean(_civ_free.intersection(box(GATE_U, RB_C[1], 540, 400)))
 SERV["MOSQUE"], r = cut(_ne, 2000, "v", "max")
-SERV["HEALTH"], r = cut(r, 1000, "u", "max")
-OPEN["G_MOSQUE"] = r
+OPEN["G_MOSQUE"] = r                          # mosque forecourt garden on the roundabout
 _sw = clean(_civ_free.intersection(box(370, -10, GATE_U, RB_C[1])))
+bay, _sw = layby(_sw, 50.0)
+LAYBYS.append(bay)
 SERV["PRIMARY"], r = cut(_sw, 3000, "v", "min")
 OPEN["G_PRIM"] = r
-_se = clean(_civ_free.intersection(box(GATE_U, -10, 530, RB_C[1])))
-SERV["KG"], r = cut(_se, 1500, "v", "min")
-OPEN["G_KG"] = r
-# west end: education + sports campus
-_west = clean(INNER.intersection(box(-100, -10, 150.0 - 6.0, 400)))
+_se = clean(_civ_free.intersection(box(GATE_U, -10, 540, RB_C[1])))
+SERV["HEALTH"], _ = cut(clean(_se.intersection(box(-1e3, -10, 1e3, IN0 + 36))), 1000, "u", "max")
+OPEN["G_HEALTH"] = clean(_se.difference(SERV["HEALTH"].buffer(0.01)))
+# west end: secondary school + west park; Rev 1: kindergarten split in two (750 + 750) so that every
+# home is within about 300 m of one: west KG on the ring by the west clusters ...
+_west = clean(INNER.intersection(box(-100, -10, 150.0 - 6.0, 400)).difference(CLUSTERS.buffer(6.0)))
+_kgw = clean(_west.intersection(box(100, -10, 150, IN0 + 34)))
+bay, _kgw = layby(_kgw, 22.0)
+LAYBYS.append(bay)
+SERV["KG_W"], _ = cut(_kgw, 750, "u", "max")
+_west = clean(_west.difference(SERV["KG_W"].buffer(4.0)).difference(bay.buffer(0.5)))
+_c = _west.centroid
+bay = clean(_strip.intersection(_west).intersection(box(_c.x - 25, 150, _c.x + 25, 400)))
+LAYBYS.append(bay)
+_west = clean(_west.difference(bay.buffer(0.01)))
 SERV["SECONDARY"], r = cut(_west, 5000, "v", "max")
-SERV["CLUB"], r = cut(r, 5000, "v", "min")
+# Rev 2 (architect): the club is dropped from the programme; its land joins the sports park
 WEST_PARK = r
+# ... and east KG at the end of the towers' plaza, for the towers' families and the east clusters
+_kge = clean(INNER.intersection(box(676.0, IN0 + CL_DEPTH + 6.0, 708.0, 400)))
+SERV["KG_E"], _ = cut(_kge, 750, "v", "max")
 # utilities + police + civil defence in the villa row east of the service gate
 _ut = clean(OUTER_BELT.intersection(box(SGATE_U + 6, -10, 900, 120)).intersection(box(-1e3, -10, 1e3, 70)))
 SERV["POLICE"], r = cut(_ut, 600, "u", "min")
@@ -238,11 +280,12 @@ UTILITIES = ("WATER", "POWER", "WASTE")
 
 # --- roads -------------------------------------------------------------------------------------------
 ROADS = unary_union([RING, AXIS_N, AXIS_S, ROUNDABOUT, SG_ROAD] + LANES + HEADS).intersection(SITE)
+ROADS = ROADS.difference(unary_union(LAYBYS))
 ROADS = ROADS.difference(RB_ISLAND).difference(MEDIAN)
 
 # --- green: everything left inside and outside the ring ------------------------------------------------
 _taken = unary_union(VILLAS + HOUSES + TOWERS + [PLAZA, ROADS, RB_ISLAND, MEDIAN, CLUSTERS] + list(SERV.values())
-                     + list(OPEN.values()) + [WEST_PARK, UT_GREEN])
+                     + list(OPEN.values()) + [WEST_PARK, UT_GREEN] + LAYBYS)
 _inner_left = INNER.difference(_taken)
 # the Shallalat garden at the east tip, with a lake and cascades
 EAST_GARDEN = clean(_inner_left.intersection(box(708.0, -10, 900, 400)))
@@ -301,6 +344,12 @@ def total(gs):
 GARDENS = [OPEN[k] for k in OPEN if k.startswith("G_")]
 PARKS = [CENTRAL_PARK, WEST_PARK, EAST_GARDEN] + LINKS + GARDENS
 GREEN = PARKS + FINGERS + POCKETS + [UT_GREEN, RB_ISLAND, MEDIAN]
+
+
+def walk_max(keys):
+    """Longest straight walk from any home (villa, house, tower) to the nearest of these services."""
+    homes = [p.centroid for p in VILLAS + HOUSES + TOWERS]
+    return max(min(h.distance(SERV[k]) for k in keys) for h in homes)
 LANDUSE = [
     (f"Villas 400 m2 ({len(VILLAS)}) - فلل 400 م2", total(VILLAS)),
     (f"Houses 240 m2 ({len(HOUSES)}) - دور 240 م2", total(HOUSES)),
@@ -308,9 +357,57 @@ LANDUSE = [
     ("Community services - الخدمات", total(SERV[k] for k in SERV if k not in UTILITIES)),
     ("Utilities - المرافق الفنية", total(SERV[k] for k in UTILITIES)),
     ("Parks, gardens, green fingers - الحدائق والأصابع الخضراء", total(GREEN)),
-    ("Parking (mall) - موقف المول", OPEN["PARK_MALL"].area),
+    ("Parking: mall + school drop-off bays - مواقف المول وأماكن إنزال الطلاب", OPEN["PARK_MALL"].area + total(LAYBYS)),
     ("Roads - الشوارع", ROADS.area),
 ]
+
+# --- circulation (Rev 1) -------------------------------------------------------------------------------
+# Vehicles: the ring (two-way, 8 m) and the gate axis carry all traffic; the cul-de-sacs serve 8 houses
+# each; tower cars turn off the ring straight into two basement ramps between the towers; service
+# trucks use the south gate and the ring's south-east arc only, where there are no homes.
+# Pedestrians: a 6 m promenade (the green spine) runs west-east through the parks; every green finger
+# lines up with a villa pocket garden and a raised zebra crossing on the ring; the ring's walks are
+# lined with trees on both sides - a 1.9 km shaded loop (the "green ring").
+RING_CL = R_OUT.buffer(-RING_W / 2).exterior
+_nv = north_v(GATE_U)
+AXIS_CL = LineString([(GATE_U, _nv), (GATE_U, IN0 - RING_W / 2)])
+LANE_CL = [LineString([fr.p(tc, IN0 - RING_W / 2), fr.p(tc, IN0 + PER_SIDE * HW + HEAD / 2)])
+           for fr, ts in ((FS, CL_SOUTH_T), (FN, CL_NORTH_T)) for tc in ts]
+CROSSINGS = [FS.rect(u - 2.0, u + 2.0, BELT, IN0) for u in FINGER_U_S] + \
+            [FN.rect(t - 2.0, t + 2.0, BELT, IN0) for t in FINGER_T_N]
+SPINE_V = 101.0
+CROSSINGS.append(box(GATE_U - 6, SPINE_V - 2, GATE_U + 6, SPINE_V + 2))
+SPINE = LineString([(30, 140), (144, 140), (172, 128), (205, 108), (290, 106), (345, 108), (370, SPINE_V),
+                    (528, SPINE_V), (548, 107), (676, 107), (712, 98), (735, 64), (770, 52), (805, 70), (812, 95),
+                    (790, 116), (750, 118), (712, 98)])
+FINGER_WALKS = [LineString([FS.p(u, BELT / 2), FS.p(u, IN0 + CL_DEPTH + 3)]) for u in FINGER_U_S] + \
+               [LineString([FN.p(t, BELT / 2), FN.p(t, IN0 + CL_DEPTH + 3)]) for t in FINGER_T_N]
+_walkable = unary_union(PARKS + FINGERS + POCKETS + [PLAZA] + CROSSINGS).buffer(0.3)
+SPINE_PATH = unary_union([SPINE.buffer(3.0)] + [w.buffer(1.5) for w in FINGER_WALKS]).intersection(_walkable)
+SPINE_PATH = SPINE_PATH.difference(unary_union(WATER).buffer(1.0)).difference(unary_union(TOWERS).buffer(1.0))
+# ring-road trees, both sides, every 10 m
+_no_tree = unary_union(LANES + CROSSINGS + LAYBYS + [AXIS_N, AXIS_S, SG_ROAD, ROUNDABOUT]).buffer(4.0)
+RING_TREES = []
+for edge in (R_OUT.buffer(-1.6).exterior, INNER.buffer(1.6).exterior):
+    for d in np.arange(0, edge.length, 10.0):
+        q = edge.interpolate(d)
+        if not _no_tree.contains(q):
+            RING_TREES.append((q.x, q.y))
+# basement ramps between the towers, straight off the ring
+RAMPS = []
+for a_, b_ in zip(TOWERS, TOWERS[1:]):
+    tm = (FN.t_of(a_.centroid.coords[0]) + FN.t_of(b_.centroid.coords[0])) / 2
+    RAMPS.append(FN.rect(tm - 3.5, tm + 3.5, IN0, IN0 + 12.0))
+GATEHOUSE = box(GATE_U - 1.5, _nv - 15, GATE_U + 1.5, _nv - 8)
+# routes for the circulation diagram
+_tg = FN.t_of((GATE_U, _nv))
+_ring_n = lambda t0, t1: [FN.p(t, BELT + RING_W / 2) for t in np.linspace(t0, t1, 12)]  # noqa: E731
+_ramp_t = [FN.t_of(r.centroid.coords[0]) for r in RAMPS]
+TOWER_ROUTE = LineString([(GATE_U, _nv)] + _ring_n(_tg, _ramp_t[-1]) + [RAMPS[-1].centroid.coords[0]])
+MALL_ROUTE = LineString([(GATE_U, _nv)] + _ring_n(_tg, FN.t_of(SERV["MALL"].centroid.coords[0]))
+                        + [SERV["MALL"].centroid.coords[0]])
+SERVICE_ROUTE = LineString([(SGATE_U, 0), (SGATE_U, BELT + RING_W / 2), (812, BELT + RING_W / 2),
+                            SERV["WASTE"].centroid.coords[0]])
 
 if __name__ == "__main__":
     print("villas", len(VILLAS), "north", len(_north), "south", len(_south), "houses", len(HOUSES))
