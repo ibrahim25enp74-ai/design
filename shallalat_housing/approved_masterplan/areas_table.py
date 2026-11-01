@@ -42,7 +42,7 @@ geo['services_sw'] = left.intersection(Polygon([(sv[0]-200, sp[1]), (sp[2], sp[1
 rest = left.difference(geo['services_sw'])
 for g in sorted(getattr(rest, 'geoms', [rest]), key=lambda g: -g.area)[:6]: print('unassigned', round(g.area), [round(t) for t in g.bounds])
 tw = unary_union(towers).buffer(0.5)
-geo['plaza'] = geo['plaza'].union(rest.intersection(tw))      # tower footprints (white squares)
+geo['towers'] = rest.intersection(tw)      # tower footprints (white squares)
 geo['road'] = geo['road'].union(rest.difference(tw))   # thin gaps between hatches -> roads
 A = {k: g.area for k, g in geo.items()}
 FLATS = 342   # fixed by the user
@@ -63,7 +63,7 @@ fig = plt.figure(figsize=(30, 21), facecolor='white')
 ax = fig.add_axes([0.0, 0.40, 1.0, 0.56])
 Frontend(RenderContext(doc), MatplotlibBackend(ax), config=Configuration(background_policy=BackgroundPolicy.WHITE)).draw_layout(
     ms, finalize=False, filter_func=lambda e: e.dxftype() not in ('MULTILEADER', 'TEXT') or e.dxf.layer == 'MP_SPORT_TEXT')
-NAMES = dict(villa='فلل سكنية 400 م٢', house='دور سكنية متصلة 250 م٢', plaza='الأبراج السكنية والساحة', mall='مول تجاري',
+NAMES = dict(villa='فلل سكنية 400 م٢', house='دور سكنية متصلة 250 م٢', towers='الأبراج السكنية (3)', plaza='حديقة وساحة الأبراج', mall='مول تجاري',
              police='مركز شرطة', cd='دفاع مدني', health='مركز صحي', admin='إدارة المجمع', primary='مدرسة ابتدائية',
              kg='روضة', mosque='جامع', secondary='مدرسة ثانوية', sports='ملاعب كرة قدم وتنس وسلة',
              services_sw='خدمات (مرافق فنية)', green='حدائق وأشرطة خضراء', road='شوارع', muni='أرض للبلدية')
@@ -86,7 +86,7 @@ ax.set_xlim(minx-45, maxx+15); ax.set_ylim(miny-10, maxy+60); ax.set_aspect('equ
 ax.text(maxx-5, maxy+50, 'N ↑', size=26, ha='right', fontweight='bold')
 fig.text(0.5, 0.985, 'مجمع الشلالات السكني - المخطط الأساسي المعتمد: جدول المساحات وعدد الوحدات', ha='center', va='top', size=30, **AR)
 # ---- table
-rows = [('villa', units['villa']), ('house', units['house']), ('plaza', units['flats']), ('mall', None), ('health', None),
+rows = [('villa', units['villa']), ('house', units['house']), ('towers', units['flats']), ('plaza', None), ('mall', None), ('health', None),
         ('police', None), ('cd', None), ('admin', None), ('mosque', None), ('primary', None), ('secondary', None), ('kg', None),
         ('sports', None), ('services_sw', None), ('green', None), ('road', None)]
 net = bnd.area - A['muni']
