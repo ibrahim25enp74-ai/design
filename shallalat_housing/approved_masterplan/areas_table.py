@@ -36,7 +36,14 @@ plaza = geo['green'].intersection(twz).buffer(0)
 geo['green'] = geo['green'].difference(twz)
 geo['plaza'] = plaza
 used = unary_union(list(geo.values()))
-geo['services_sw'] = bnd.difference(used).buffer(-0.5).buffer(0.5)   # un-hatched SW corner labelled 'خدمات'
+left = bnd.difference(used)
+sv = geo['secondary'].bounds; sp = geo['sports'].bounds
+geo['services_sw'] = left.intersection(Polygon([(sv[0]-200, sp[1]), (sp[2], sp[1]), (sp[2], sp[1]-400), (sv[0]-200, sp[1]-400)]))  # SW corner 'خدمات'
+rest = left.difference(geo['services_sw'])
+for g in sorted(getattr(rest, 'geoms', [rest]), key=lambda g: -g.area)[:6]: print('unassigned', round(g.area), [round(t) for t in g.bounds])
+tw = unary_union(towers).buffer(0.5)
+geo['plaza'] = geo['plaza'].union(rest.intersection(tw))      # tower footprints (white squares)
+geo['road'] = geo['road'].union(rest.difference(tw))   # thin gaps between hatches -> roads
 A = {k: g.area for k, g in geo.items()}
 FLATS = 342   # fixed by the user
 units = dict(villa=cnt['villa'], house=cnt['house'], flats=FLATS)
