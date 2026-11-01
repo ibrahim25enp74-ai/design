@@ -13,7 +13,11 @@ for h in ms.query('HATCH'):
         for p in h.paths:
             v = [tuple(x[:2]) for x in p.vertices]
             if len(v) > 4 and math.dist(v[0], v[-1]) < 0.01: v = v[:-1]
+            if len(v) > 4:
+                q = list(Polygon(v).simplify(0.6).exterior.coords)[:-1]
+                if len(q) == 4: v = q
             if len(v) == 4: plots.append(v)
+            else: print('skipped plot', len(v))
 print('villa plots', len(plots))
 U = unary_union([Polygon(v) for v in plots])
 grey = None
