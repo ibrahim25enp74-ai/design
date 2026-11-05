@@ -65,7 +65,8 @@ for nk in polys(narrow0):
     ds = sorted(other.distance(Point(c)) for g_ in getattr(bd, 'geoms', [bd]) for c in getattr(g_, 'coords', []))
     if not ds: continue
     Wm = ds[len(ds) // 2]
-    fill.append(L_.difference(other.buffer(Wm + 0.05, join_style='round')))
+    sm = side_.buffer(25.0, join_style='round').buffer(-25.0, join_style='round')   # smooth the tower-side edge (fills dents/bulges)
+    fill.append(sm.difference(side_).intersection(road).intersection(side_.buffer(5.0)).union(L_.intersection(nk.buffer(3.0))))
     print('finger', round(nk.centroid.x), round(nk.centroid.y), 'road width', round(Wm, 2))
 fill = unary_union(fill).intersection(road) if fill else Polygon()
 ped = narrow0.union(fill.intersection(narrow0.buffer(3.0)))   # paved finger + its mouth
