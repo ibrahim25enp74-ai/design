@@ -106,28 +106,44 @@ zone12 = road.difference(zone15).difference(zone20)
 core = road.union(median).difference(zone20).difference(props.buffer(8.2)).buffer(0.5)   # junction / wide areas
 core = big(core, 20)
 nopark = core.buffer(9.0)
-# 20 m section: footpath 2.4 | tree strip 1.2 (1.05 planting + 0.15 kerb) | parking 2.4 | lane 3 | median 2 | ...
-foot20 = zone20.intersection(b(2.4))
-plant20 = zone20.intersection(b(3.45)).difference(b(2.4))
-kerb20 = zone20.intersection(b(3.6)).difference(b(3.45))
-park20 = zone20.intersection(b(6.0)).difference(b(3.6)).difference(nopark)
-carr20 = zone20.difference(b(3.6)).difference(park20).difference(med20)
-# 15 m section: footpath 1.8 | tree strip 0.45 (0.30 planting + 0.15 kerb) | parking 2.25 | lanes 3 + 3 | ...
-foot15 = zone15.intersection(b(1.8))
-plant15 = zone15.intersection(b(2.10)).difference(b(1.8))
-kerb15 = zone15.intersection(b(2.25)).difference(b(2.10))
-park15 = big(zone15.intersection(b(4.5)).difference(b(2.25)).difference(nopark), 15)
-parkline = park15.buffer(0.1).difference(park15).difference(b(2.3)).intersection(zone15).union(unary_union(ticks).intersection(park15))
-carr15 = zone15.difference(b(2.25)).difference(park15)
-foot15 = foot15.union(foot20); plant15 = plant15.union(plant20); kerb15 = kerb15.union(kerb20)
-parkline = parkline.union(park20.buffer(0.1).difference(park20).difference(b(3.65)).intersection(zone20).difference(med20).union(unary_union(ticks).intersection(park20)))
-park15 = park15.union(park20); carr15 = carr15.union(carr20)
-# 12 m section (rest of the roads)
-drain = zone12.intersection(b(0.4))
-foot = zone12.intersection(b(2.0)).difference(drain).union(foot15)
-plant = zone12.intersection(b(2.85)).difference(b(2.0)).union(plant15)
-kerb = zone12.intersection(b(3.0)).difference(b(2.85)).union(kerb15)
-carr = zone12.difference(b(3.0)).union(carr15)
+# ---- edge-based sections: every block edge gets the section of the road it faces;
+# changes happen at a single radial cut on the block corner (flat caps) -> clean junctions
+SEC = {12: dict(foot=2.0, plant=2.85, kerb=3.0, park=None),
+       15: dict(foot=1.8, plant=2.10, kerb=2.25, park=4.5),
+       20: dict(foot=2.4, plant=3.45, kerb=3.6, park=6.0)}
+edges = {12: [], 15: [], 20: []}
+for P in polys(props):
+    for ring in [P.exterior, *P.interiors]:
+        ring = ring.segmentize(1.0)
+        cs = list(ring.coords)
+        run, cur = [], None
+        for (xa, ya), (xb, yb) in zip(cs[:-1], cs[1:]):
+            L = math.hypot(xb - xa, yb - ya)
+            if L < 1e-6: continue
+            mx, my = (xa + xb) / 2, (ya + yb) / 2; nx, ny = -(yb - ya) / L, (xb - xa) / L
+            T = None
+            for sg in (1, -1):
+                q = Point(mx + sg * nx * 5, my + sg * ny * 5)
+                if road.contains(q):
+                    T = 20 if zone20.contains(q) else 15 if zone15.contains(q) else 12
+                    break
+            if T != cur:
+                if cur and len(run) > 1: edges[cur].append(LineString(run))
+                run, cur = [(xa, ya)], T
+            run.append((xb, yb))
+        if cur and len(run) > 1: edges[cur].append(LineString(run))
+E_ = {T: unary_union(v) for T, v in edges.items()}
+band = lambda T, d: E_[T].buffer(d, cap_style='flat', join_style='round').intersection(road) if not E_[T].is_empty else Polygon()
+drain = unary_union([band(T, 0.4) for T in SEC])
+foot = unary_union([band(T, SEC[T]['foot']) for T in SEC]).difference(drain)
+side = unary_union([band(T, SEC[T]['kerb']) for T in SEC])
+plant = unary_union([band(T, SEC[T]['plant']) for T in SEC]).difference(foot).difference(drain)
+kerb = side.difference(plant).difference(foot).difference(drain)
+park15 = unary_union([band(T, SEC[T]['park']) for T in (15, 20)]).difference(side).difference(nopark).difference(med20)
+park15 = big(park15, 15)
+parkline = park15.buffer(0.1).difference(park15).difference(side.buffer(0.05)).intersection(road).difference(med20)
+parkline = parkline.union(unary_union(ticks).intersection(park15))
+carr = road.difference(side).difference(park15).difference(med20)
 print('20 m', round(zone20.area), '15 m road area', round(zone15.area), '12 m road area', round(zone12.area))
 med_kerb = median.difference(median.buffer(-0.15))
 med_grass = median.buffer(-0.15)
@@ -212,7 +228,7 @@ M = {
     'plant': mat('Tree_corridor_grass', (0.10, 0.22, 0.05), 0.95, 'noise', 1.5, (0.20, 0.17, 0.08)),
     'park': mat('Parking_asphalt', (0.07, 0.07, 0.075), 0.9, 'noise', 3.0, (0.09, 0.09, 0.095)),
     'kerb': mat('Kerb_concrete', (0.70, 0.70, 0.68), 0.7),
-    'drain': mat('Stormwater_drain', (0.12, 0.13, 0.14), 0.5, 'brick', 12, (0.03, 0.03, 0.03), metal=0.6),
+    'drain': mat('Stormwater_drain', (0.42, 0.42, 0.42), 0.6, 'brick', 12, (0.30, 0.30, 0.30), metal=0.3),
     'dash': mat('Road_marking', (0.95, 0.95, 0.92), 0.5),
     'grass': mat('Grass', (0.08, 0.25, 0.04), 0.95, 'noise', 0.3, (0.15, 0.32, 0.06)),
     'plot': mat('Residential_plot', (0.70, 0.62, 0.50), 0.95, 'noise', 0.2, (0.62, 0.55, 0.44)),
@@ -295,7 +311,7 @@ prism('Parking_marking', parkline, 0.0, 0.006, M['dash'])
 prism('Kerb', kerb, -0.4, 0.15, M['kerb'])
 prism('Tree_strip', plant, -0.4, 0.10, M['plant'])
 prism('Footpath', foot, -0.4, 0.15, M['foot'])
-prism('Stormwater_drain', drain, -0.4, 0.12, M['drain'])
+prism('Stormwater_drain', drain, -0.4, 0.15, M['drain'])
 prism('Median_kerb', med_kerb, -0.4, 0.18, M['kerb'])
 prism('Median_green', med_grass, -0.4, 0.15, M['grass'])
 prism('Green_areas', green, -0.4, 0.25, M['grass'])
