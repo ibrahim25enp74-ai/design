@@ -73,10 +73,11 @@ props = props.union(ped)
 road = unary_union(polys(shapely.make_valid(road.difference(ped)))).buffer(0)
 props = unary_union(polys(shapely.make_valid(props))).buffer(0)
 # round acute tips of blocks/greens: the clipped tip becomes footpath paving
-_pr = props.buffer(-3.0, join_style='round').buffer(3.0, join_style='round')
-tip = unary_union([p for p in polys(props.difference(_pr)) if 0.5 < p.area < 80])
+_pr = props.buffer(-6.0, join_style='round').buffer(6.0, join_style='round')
+tip = unary_union([p for p in polys(props.difference(_pr)) if 0.5 < p.area < 75 and p.intersects(road.buffer(0.3))])
 props = props.difference(tip)
-green, houses, villas, services, plaza, towers = [g_.difference(tip) for g_ in (green, houses, villas, services, plaza, towers)]
+road = road.union(tip)          # tips become road: kerb/footpath follow a smooth arc
+green, houses, villas, services, plaza, towers = [big(g_.difference(tip).difference(road.buffer(-0.05)), 1.0) for g_ in (green, houses, villas, services, plaza, towers)]
 print('tips', len(polys(tip)), round(tip.area))
 b = lambda d: props.buffer(d, join_style='mitre', mitre_limit=2.0)
 drain = road.intersection(b(0.4))
@@ -354,7 +355,6 @@ prism('Kerb', kerb, -0.4, 0.15, M['kerb'])
 prism('Tree_strip', plant, -0.4, 0.10, M['plant'])
 prism('Footpath', foot, -0.4, 0.15, M['foot'])
 prism('Pedestrian_paving', ped, -0.4, 0.25, M['paved'])
-prism('Corner_paving', tip, -0.4, 0.15, M['foot'])
 # perimeter wall between the project and the external streets, open only at the gates
 gates = unary_union([m_.buffer(10.5) for m_ in polys(median_orig)])   # 4 gates, each around its median
 wl = site.exterior.difference(gates)
