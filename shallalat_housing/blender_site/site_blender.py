@@ -154,11 +154,12 @@ dashes = unary_union(dashes)
 
 # plot boundary lines
 lot_lines = []
+lot_polys = []
 for L in ['L-HOUSE-LOTS', 'L-VILLA-LOTS', 'L-SERVICE-PLOTS']:
     for e in msp.query(f'LWPOLYLINE[layer=="{L}"]'):
         pts = e.get_points('xy')
         if len(pts) > 2:
-            lot_lines.append(mv(Polygon(pts)).exterior)
+            lot_lines.append(mv(Polygon(pts)).exterior); lot_polys.append(mv(Polygon(pts)).buffer(0))
 lot_lines = unary_union(lot_lines).buffer(0.15, cap_style='flat').intersection(houses.union(villas).union(services).buffer(0.01))
 
 # external streets (context)
@@ -232,26 +233,51 @@ def polys(g):
     if isinstance(g, MultiPolygon): return list(g.geoms)
     return [p for gg in getattr(g, 'geoms', []) for p in polys(gg)]
 
-def prism(name, g, z0, z1, m):
+from shapely.geometry.polygon import orient
+from shapely.ops import split as ssplit
+
+def holefree(p, depth=0):
+    """split a polygon with holes into hole-free pieces by cutting through hole centroids"""
+    if not p.interiors or depth > 40:
+        return [p]
+    h = Polygon(p.interiors[0]).representative_point()
+    x0, y0, x1, y1 = p.bounds
+    cut = LineString([(h.x, y0 - 1), (h.x, y1 + 1)])
+    out = []
+    for q in polys(ssplit(p, cut)):
+        out += holefree(q, depth + 1)
+    return out
+
+def prism(name, g, z0, z1, m, tiles=None):
     bm = bmesh.new()
+    g = shapely.set_precision(g, 0.005) if not g.is_empty else g
+    tops = []
+    if tiles:
+        cover = unary_union(tiles)
+        for t_ in tiles:
+            tops += polys(shapely.set_precision(t_, 0.005))
+        tops += polys(g.difference(cover))
+    else:
+        tops = polys(g)
+    for p in tops:
+        if p.area < 0.01: continue
+        for q in holefree(p):
+            q = orient(q.simplify(0.01), 1.0)
+            if q.is_empty or q.area < 0.01 or q.geom_type != 'Polygon': continue
+            c = list(q.exterior.coords)[:-1]
+            vs = [bm.verts.new((x, y, z1)) for x, y in c]
+            try: bm.faces.new(vs)
+            except ValueError: pass
     for p in polys(g):
         if p.area < 0.01: continue
-        p = shapely.set_precision(p, 0.005)
-        if p.is_empty: continue
-        for pp in polys(p):
-            tris = shapely.constrained_delaunay_triangles(pp)
-            for tr in tris.geoms:
-                c = list(tr.exterior.coords)[:3]
-                vs = [bm.verts.new((x, y, z1)) for x, y in c]
+        for ring in [p.exterior, *p.interiors]:
+            c = list(ring.coords)
+            for (xa, ya), (xb, yb) in zip(c[:-1], c[1:]):
+                vs = [bm.verts.new(v) for v in ((xa, ya, z0), (xb, yb, z0), (xb, yb, z1), (xa, ya, z1))]
                 try: bm.faces.new(vs)
                 except ValueError: pass
-            for ring in [pp.exterior, *pp.interiors]:
-                c = list(ring.coords)
-                for (xa, ya), (xb, yb) in zip(c[:-1], c[1:]):
-                    vs = [bm.verts.new(v) for v in ((xa, ya, z0), (xb, yb, z0), (xb, yb, z1), (xa, ya, z1))]
-                    try: bm.faces.new(vs)
-                    except ValueError: pass
-    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.002)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.003)
+    bmesh.ops.dissolve_degenerate(bm, edges=bm.edges, dist=0.001)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     me = bpy.data.meshes.new(name); bm.to_mesh(me); bm.free()
     for f in me.polygons: f.use_smooth = False
@@ -273,10 +299,11 @@ prism('Stormwater_drain', drain, -0.4, 0.12, M['drain'])
 prism('Median_kerb', med_kerb, -0.4, 0.18, M['kerb'])
 prism('Median_green', med_grass, -0.4, 0.15, M['grass'])
 prism('Green_areas', green, -0.4, 0.25, M['grass'])
-prism('House_plots', houses, -0.4, 0.25, M['plot'])
-prism('Villa_plots', villas, -0.4, 0.25, M['villa'])
+tl = lambda blk: [q for lp in lot_polys for q in polys(lp.intersection(blk)) if q.area > 1]
+prism('House_plots', houses, -0.4, 0.25, M['plot'], tl(houses))
+prism('Villa_plots', villas, -0.4, 0.25, M['villa'], tl(villas))
 prism('Plot_boundaries', lot_lines, 0.25, 0.32, M['lotline'])
-prism('Service_plots', services, -0.4, 0.25, M['service'])
+prism('Service_plots', services, -0.4, 0.25, M['service'], tl(services))
 prism('Central_plaza', plaza, -0.4, 0.25, M['plaza'])
 tz_hard = unary_union([t['T-PAVED'], t['T-GARDEN-PATH'], t['T-TERRACE'], t['T-TOWER']])
 prism('Tower_zone_garden', towers.difference(tz_hard).difference(t['T-FOUNTAIN']).difference(t['T-PLAY']).difference(t['T-RAMP']), -0.4, 0.25, M['grass'])
