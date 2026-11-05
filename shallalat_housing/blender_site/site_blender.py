@@ -68,9 +68,11 @@ for nk in polys(narrow0):
     fill.append(L_.difference(other.buffer(Wm + 0.05, join_style='round')))
     print('finger', round(nk.centroid.x), round(nk.centroid.y), 'road width', round(Wm, 2))
 fill = unary_union(fill).intersection(road) if fill else Polygon()
-ped = narrow0.union(fill)
-props = props.union(ped)
-road = unary_union(polys(shapely.make_valid(road.difference(ped)))).buffer(0)
+ped = narrow0.union(fill.intersection(narrow0.buffer(3.0)))   # paved finger + its mouth
+fill_green = fill.difference(ped)                              # rest of the bulge -> lawn behind a straight footpath
+green = green.union(fill_green)
+props = props.union(ped).union(fill_green)
+road = unary_union(polys(shapely.make_valid(road.difference(ped).difference(fill_green)))).buffer(0)
 props = unary_union(polys(shapely.make_valid(props))).buffer(0)
 # round acute tips of blocks/greens: the clipped tip becomes footpath paving
 _pr = props.buffer(-6.0, join_style='round').buffer(6.0, join_style='round')
