@@ -34,7 +34,9 @@ def layer(L):
 
 site = mv(Polygon(msp.query('LWPOLYLINE[layer=="SITE-BOUNDARY"]')[0].get_points('xy')))
 road = layer('R-ASPHALT')
+road_orig = road
 median = layer('R-MEDIAN')
+median_orig = median
 green = layer('B-GREEN')
 houses = layer('B-HOUSES'); villas = layer('B-VILLAS')
 services = layer('B-SERVICES'); plaza = layer('B-PLAZA'); towers = layer('B-TOWERS')
@@ -70,6 +72,12 @@ ped = narrow0.union(fill)
 props = props.union(ped)
 road = unary_union(polys(shapely.make_valid(road.difference(ped)))).buffer(0)
 props = unary_union(polys(shapely.make_valid(props))).buffer(0)
+# round acute tips of blocks/greens: the clipped tip becomes footpath paving
+_pr = props.buffer(-3.0, join_style='round').buffer(3.0, join_style='round')
+tip = unary_union([p for p in polys(props.difference(_pr)) if 0.5 < p.area < 80])
+props = props.difference(tip)
+green, houses, villas, services, plaza, towers = [g_.difference(tip) for g_ in (green, houses, villas, services, plaza, towers)]
+print('tips', len(polys(tip)), round(tip.area))
 b = lambda d: props.buffer(d, join_style='mitre', mitre_limit=2.0)
 drain = road.intersection(b(0.4))
 def polys(g):
@@ -257,6 +265,7 @@ M = {
     'foot': mat('Footpath_paving', (0.62, 0.55, 0.45), 0.85, 'brick', 2.5, (0.55, 0.48, 0.40)),
     'plant': mat('Tree_corridor_grass', (0.10, 0.22, 0.05), 0.95, 'noise', 1.5, (0.20, 0.17, 0.08)),
     'park': mat('Parking_asphalt', (0.07, 0.07, 0.075), 0.9, 'noise', 3.0, (0.09, 0.09, 0.095)),
+    'wall': mat('Boundary_wall', (0.78, 0.74, 0.66), 0.8, 'brick', 1.2, (0.72, 0.68, 0.60)),
     'kerb': mat('Kerb_concrete', (0.70, 0.70, 0.68), 0.7),
     'drain': mat('Stormwater_drain', (0.42, 0.42, 0.42), 0.6, 'brick', 12, (0.30, 0.30, 0.30), metal=0.3),
     'dash': mat('Road_marking', (0.95, 0.95, 0.92), 0.5),
@@ -345,6 +354,14 @@ prism('Kerb', kerb, -0.4, 0.15, M['kerb'])
 prism('Tree_strip', plant, -0.4, 0.10, M['plant'])
 prism('Footpath', foot, -0.4, 0.15, M['foot'])
 prism('Pedestrian_paving', ped, -0.4, 0.25, M['paved'])
+prism('Corner_paving', tip, -0.4, 0.15, M['foot'])
+# perimeter wall between the project and the external streets, open only at the gates
+gates = unary_union([m_.buffer(10.5) for m_ in polys(median_orig)])   # 4 gates, each around its median
+wl = site.exterior.difference(gates)
+wl = unary_union([l for l in getattr(wl, 'geoms', [wl]) if l.length > 1.0])
+wall = wl.buffer(0.15, cap_style='flat', join_style='mitre').intersection(site.buffer(0.01))
+prism('Perimeter_wall_2_4m', wall, -0.4, 2.4, M['wall'])
+print('wall length', round(wl.length))
 prism('Stormwater_drain', drain, 0.15, 0.156, M['drain'])
 prism('Median_kerb', med_kerb, -0.4, 0.18, M['kerb'])
 prism('Median_green', med_grass, -0.4, 0.15, M['grass'])
