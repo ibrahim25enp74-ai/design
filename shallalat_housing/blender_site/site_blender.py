@@ -45,6 +45,12 @@ t = {L: layer(L) for L in ['T-PAVED', 'T-GARDEN-PATH', 'T-TERRACE', 'T-TOWER', '
 props = site.difference(road).difference(median)
 b = lambda d: props.buffer(d, join_style='mitre', mitre_limit=2.0)
 drain = road.intersection(b(0.4))
+def polys(g):
+    if g is None or g.is_empty: return []
+    if isinstance(g, Polygon): return [g]
+    if isinstance(g, MultiPolygon): return list(g.geoms)
+    return [p for gg in getattr(g, 'geoms', []) for p in polys(gg)]
+
 # ---- classify 15 m roads by measuring width along the centre lines
 cls = []
 for e in msp.query('*[layer=="R-CL"]'):
@@ -53,13 +59,20 @@ for e in msp.query('*[layer=="R-CL"]'):
     v = [(q.x - OX, q.y - OY) for q in p.flattening(0.05)]
     if len(v) > 1: cls.append(LineString(v))
 pb = props.boundary
-c15, ticks = [], []
+c15, c20, ticks = [], [], []
 for ln in cls:
     s = 0.0
     while s < ln.length:
         pt = ln.interpolate(s)
         wdt = 2 * pt.distance(pb)
-        if 13.8 <= wdt <= 16.2 and road.contains(pt):
+        if 18.5 <= wdt <= 21.5 and median.buffer(0.5).contains(pt):
+            seg = shapely.ops.substring(ln, max(s - 1.0, 0), min(s + 1.0, ln.length))
+            c20.append(seg.buffer(10.0, cap_style='flat'))
+            if abs((s % 6.0)) < 0.5:
+                a = ln.interpolate(max(s - 0.5, 0)); bb = ln.interpolate(min(s + 0.5, ln.length))
+                dx, dy = bb.x - a.x, bb.y - a.y; L = math.hypot(dx, dy) or 1
+                ticks.append(LineString([(pt.x - dy / L * 10, pt.y + dx / L * 10), (pt.x + dy / L * 10, pt.y - dx / L * 10)]).buffer(0.06, cap_style='flat'))
+        elif 13.8 <= wdt <= 16.2 and road.contains(pt):
             seg = shapely.ops.substring(ln, max(s - 1.0, 0), min(s + 1.0, ln.length))
             c15.append(seg.buffer(8.0, cap_style='flat'))
             if abs((s % 6.0)) < 0.5:   # parking bay ticks every 6 m
@@ -67,8 +80,26 @@ for ln in cls:
                 dx, dy = bb.x - a.x, bb.y - a.y; L = math.hypot(dx, dy) or 1
                 ticks.append(LineString([(pt.x - dy / L * 8, pt.y + dx / L * 8), (pt.x + dy / L * 8, pt.y - dx / L * 8)]).buffer(0.06, cap_style='flat'))
         s += 1.0
-zone15 = road.intersection(unary_union(c15)).difference(median.buffer(1))
-zone12 = road.difference(zone15)
+for mp in polys(median):
+    rr = list(mp.minimum_rotated_rectangle.exterior.coords)[:4]
+    e1 = (rr[1][0]-rr[0][0], rr[1][1]-rr[0][1]); e2 = (rr[2][0]-rr[1][0], rr[2][1]-rr[1][1])
+    if math.hypot(*e1) < math.hypot(*e2): e1, e2 = e2, e1
+    c = mp.minimum_rotated_rectangle.centroid; l1 = math.hypot(*e1); u = (e1[0]/l1, e1[1]/l1); n = (-u[1], u[0])
+    c20.append(Polygon([(c.x+sa*u[0]*l1/2+sb*n[0]*10, c.y+sa*u[1]*l1/2+sb*n[1]*10) for sa, sb in ((-1,-1),(1,-1),(1,1),(-1,1))]))
+    for k in range(int(l1 // 6) + 1):
+        q = (c.x + u[0]*(-l1/2 + 3 + 6*k), c.y + u[1]*(-l1/2 + 3 + 6*k))
+        ticks.append(LineString([(q[0]-n[0]*10, q[1]-n[1]*10), (q[0]+n[0]*10, q[1]+n[1]*10)]).buffer(0.06, cap_style='flat'))
+zone20 = road.union(median).intersection(unary_union(c20).buffer(0.01))
+med20 = median.buffer(-1.0).intersection(zone20)          # 2 m central planting strip
+median = median.difference(zone20).union(med20)
+zone15 = road.intersection(unary_union(c15)).difference(zone20)
+zone12 = road.difference(zone15).difference(zone20)
+# 20 m section: footpath 2.4 | tree strip 1.2 (1.05 planting + 0.15 kerb) | parking 2.4 | lane 3 | median 2 | ...
+foot20 = zone20.intersection(b(2.4))
+plant20 = zone20.intersection(b(3.45)).difference(b(2.4))
+kerb20 = zone20.intersection(b(3.6)).difference(b(3.45))
+park20 = zone20.intersection(b(6.0)).difference(b(3.6))
+carr20 = zone20.difference(b(6.0)).difference(med20)
 # 15 m section: footpath 1.8 | tree strip 0.45 (0.30 planting + 0.15 kerb) | parking 2.25 | lanes 3 + 3 | ...
 foot15 = zone15.intersection(b(1.8))
 plant15 = zone15.intersection(b(2.10)).difference(b(1.8))
@@ -76,13 +107,16 @@ kerb15 = zone15.intersection(b(2.25)).difference(b(2.10))
 park15 = zone15.intersection(b(4.5)).difference(b(2.25))
 parkline = zone15.intersection(b(4.6)).difference(b(4.5)).union(unary_union(ticks).intersection(park15))
 carr15 = zone15.difference(b(4.5))
+foot15 = foot15.union(foot20); plant15 = plant15.union(plant20); kerb15 = kerb15.union(kerb20)
+parkline = parkline.union(zone20.intersection(b(6.1)).difference(b(6.0)).union(unary_union(ticks).intersection(park20)))
+park15 = park15.union(park20); carr15 = carr15.union(carr20)
 # 12 m section (rest of the roads)
 drain = zone12.intersection(b(0.4))
 foot = zone12.intersection(b(2.0)).difference(drain).union(foot15)
 plant = zone12.intersection(b(2.85)).difference(b(2.0)).union(plant15)
 kerb = zone12.intersection(b(3.0)).difference(b(2.85)).union(kerb15)
 carr = zone12.difference(b(3.0)).union(carr15)
-print('15 m road area', round(zone15.area), '12 m road area', round(zone12.area))
+print('20 m', round(zone20.area), '15 m road area', round(zone15.area), '12 m road area', round(zone12.area))
 med_kerb = median.difference(median.buffer(-0.15))
 med_grass = median.buffer(-0.15)
 
