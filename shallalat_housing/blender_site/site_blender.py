@@ -30,7 +30,7 @@ def hatch_geom(h):
 def layer(L):
     gs = [hatch_geom(h) for h in msp.query(f'HATCH[layer=="{L}"]')]
     gs = [g for g in gs if g is not None and not g.is_empty]
-    return mv(unary_union(gs)) if gs else Polygon()
+    return mv(unary_union(gs).buffer(0.08, join_style='mitre').buffer(-0.08, join_style='mitre')) if gs else Polygon()
 
 site = mv(Polygon(msp.query('LWPOLYLINE[layer=="SITE-BOUNDARY"]')[0].get_points('xy')))
 road = layer('R-ASPHALT')
@@ -42,7 +42,15 @@ t = {L: layer(L) for L in ['T-PAVED', 'T-GARDEN-PATH', 'T-TERRACE', 'T-TOWER', '
 
 # ---- 12 m street section applied to every road edge that faces a property:
 # property edge | drain 0.4 | footpath 2.0 | tree corridor 1.0 (incl. 0.15 kerb) | carriageway
+def polys(g):
+    if g is None or g.is_empty: return []
+    if isinstance(g, Polygon): return [g]
+    if isinstance(g, MultiPolygon): return list(g.geoms)
+    return [p for gg in getattr(g, 'geoms', []) for p in polys(gg)]
+big = lambda g, a: unary_union([p for p in polys(g) if p.area > a])
 props = site.difference(road).difference(median)
+props = big(props.buffer(-0.6, join_style='mitre').buffer(0.6, join_style='mitre'), 60)
+road = road.union(site.difference(props).difference(median))
 b = lambda d: props.buffer(d, join_style='mitre', mitre_limit=2.0)
 drain = road.intersection(b(0.4))
 def polys(g):
@@ -80,7 +88,7 @@ for ln in cls:
                 dx, dy = bb.x - a.x, bb.y - a.y; L = math.hypot(dx, dy) or 1
                 ticks.append(LineString([(pt.x - dy / L * 8, pt.y + dx / L * 8), (pt.x + dy / L * 8, pt.y - dx / L * 8)]).buffer(0.06, cap_style='flat'))
         s += 1.0
-for mp in polys(median):
+for mp in [m_ for m_ in polys(median) if m_.area > 150]:
     rr = list(mp.minimum_rotated_rectangle.exterior.coords)[:4]
     e1 = (rr[1][0]-rr[0][0], rr[1][1]-rr[0][1]); e2 = (rr[2][0]-rr[1][0], rr[2][1]-rr[1][1])
     if math.hypot(*e1) < math.hypot(*e2): e1, e2 = e2, e1
@@ -93,22 +101,26 @@ zone20 = road.union(median).intersection(unary_union(c20).buffer(0.01))
 med20 = median.buffer(-1.0).intersection(zone20)          # 2 m central planting strip
 median = median.difference(zone20).union(med20)
 zone15 = road.intersection(unary_union(c15)).difference(zone20)
+zone15 = big(zone15, 400)
 zone12 = road.difference(zone15).difference(zone20)
+core = road.union(median).difference(zone20).difference(props.buffer(8.2)).buffer(0.5)   # junction / wide areas
+core = big(core, 20)
+nopark = core.buffer(9.0)
 # 20 m section: footpath 2.4 | tree strip 1.2 (1.05 planting + 0.15 kerb) | parking 2.4 | lane 3 | median 2 | ...
 foot20 = zone20.intersection(b(2.4))
 plant20 = zone20.intersection(b(3.45)).difference(b(2.4))
 kerb20 = zone20.intersection(b(3.6)).difference(b(3.45))
-park20 = zone20.intersection(b(6.0)).difference(b(3.6))
-carr20 = zone20.difference(b(6.0)).difference(med20)
+park20 = zone20.intersection(b(6.0)).difference(b(3.6)).difference(nopark)
+carr20 = zone20.difference(b(3.6)).difference(park20).difference(med20)
 # 15 m section: footpath 1.8 | tree strip 0.45 (0.30 planting + 0.15 kerb) | parking 2.25 | lanes 3 + 3 | ...
 foot15 = zone15.intersection(b(1.8))
 plant15 = zone15.intersection(b(2.10)).difference(b(1.8))
 kerb15 = zone15.intersection(b(2.25)).difference(b(2.10))
-park15 = zone15.intersection(b(4.5)).difference(b(2.25))
-parkline = zone15.intersection(b(4.6)).difference(b(4.5)).union(unary_union(ticks).intersection(park15))
-carr15 = zone15.difference(b(4.5))
+park15 = big(zone15.intersection(b(4.5)).difference(b(2.25)).difference(nopark), 15)
+parkline = park15.buffer(0.1).difference(park15).difference(b(2.3)).intersection(zone15).union(unary_union(ticks).intersection(park15))
+carr15 = zone15.difference(b(2.25)).difference(park15)
 foot15 = foot15.union(foot20); plant15 = plant15.union(plant20); kerb15 = kerb15.union(kerb20)
-parkline = parkline.union(zone20.intersection(b(6.1)).difference(b(6.0)).union(unary_union(ticks).intersection(park20)))
+parkline = parkline.union(park20.buffer(0.1).difference(park20).difference(b(3.65)).intersection(zone20).difference(med20).union(unary_union(ticks).intersection(park20)))
 park15 = park15.union(park20); carr15 = carr15.union(carr20)
 # 12 m section (rest of the roads)
 drain = zone12.intersection(b(0.4))
@@ -135,7 +147,7 @@ for e in msp.query('*[layer=="R-CL"]'):
     s = 1.5
     while s + 3 < ln.length:
         seg = shapely.ops.substring(ln, s, s + 3)
-        if carr_in.contains(seg) and median.buffer(2).disjoint(seg):
+        if carr_in.contains(seg) and median.buffer(2).disjoint(seg) and core.disjoint(seg):
             dashes.append(seg.buffer(0.075, cap_style='flat'))
         s += 6
 dashes = unary_union(dashes)
