@@ -121,6 +121,8 @@ for P in polys(props):
     P = _orient(P, 1.0)
     for ring in [P.exterior, *P.interiors]:
         pts = np.array(ring.segmentize(STEP).coords)[:-1]
+        keep = np.hypot(*(np.roll(pts, -1, axis=0) - pts).T) > 0.05
+        pts = pts[keep]
         n = len(pts)
         if n < 4: continue
         nxt = np.roll(pts, -1, axis=0); d = nxt - pts; L = np.hypot(d[:, 0], d[:, 1]); L[L == 0] = 1e-9
@@ -141,9 +143,10 @@ for P in polys(props):
             qs = [Polygon([pts[i], pts[(i + 1) % n], off[(i + 1) % n], off[i]]) for i in range(n) if Wv[i, j] > 0.02 or Wv[(i + 1) % n, j] > 0.02]
             qs = [q.buffer(0) for q in qs]
             strips[key] += [q for q in qs if not q.is_empty]
-S = {k: unary_union(v).buffer(0.02).buffer(-0.02).intersection(road) for k, v in strips.items()}
+narrow = big(road.difference(road.buffer(-5.0).buffer(5.0, join_style='round')).difference(zone20.buffer(1.0)), 40)
+S = {k: unary_union(v).buffer(0.05).buffer(-0.05).intersection(road).difference(narrow).simplify(0.03) for k, v in strips.items()}
 drain = props.buffer(0.4, join_style='round').intersection(S['foot'])
-foot = S['foot'].difference(drain)
+foot = S['foot'].union(narrow)          # drain is laid on top as an overlay
 side = S['kerb']
 plant = S['plant'].difference(S['foot'])
 kerb = side.difference(S['plant'])
@@ -151,7 +154,7 @@ park15 = S['park'].difference(side).difference(nopark).difference(med20)
 park15 = big(park15, 15)
 parkline = park15.buffer(0.1).difference(park15).difference(side.buffer(0.05)).intersection(road).difference(med20)
 parkline = parkline.union(unary_union(ticks).intersection(park15))
-carr = road.difference(side).difference(park15).difference(med20)
+carr = road.difference(side).difference(park15).difference(med20).difference(narrow)
 print('20 m', round(zone20.area), '15 m road area', round(zone15.area), '12 m road area', round(zone12.area))
 med_kerb = median.difference(median.buffer(-0.15))
 med_grass = median.buffer(-0.15)
@@ -312,6 +315,9 @@ def prism(name, g, z0, z1, m, tiles=None):
 # levels (m): carriageway 0.00 | planting 0.10 | footpath/kerb 0.15 | drain 0.12 | plots 0.25
 prism('Surrounding_ground', box(-1300, -900, 1300, 900).difference(site).difference(ext), -0.6, -0.05, M['terrain'])
 prism('External_streets_30m_20m', ext, -0.6, 0.0, M['asphalt'])
+prism('Site_base', site.union(road), -0.8, -0.35, M['kerb'])
+prism('Road_base', road, -0.7, -0.2, M['asphalt'])
+prism('Sidewalk_base', side.union(narrow), -0.6, 0.0, M['kerb'])
 prism('Carriageway', carr, -0.4, 0.0, M['asphalt'])
 prism('Centre_line_dashed', dashes, 0.0, 0.006, M['dash'])
 prism('Parking_lanes_2_25m', park15, -0.4, 0.0, M['park'])
@@ -319,7 +325,7 @@ prism('Parking_marking', parkline, 0.0, 0.006, M['dash'])
 prism('Kerb', kerb, -0.4, 0.15, M['kerb'])
 prism('Tree_strip', plant, -0.4, 0.10, M['plant'])
 prism('Footpath', foot, -0.4, 0.15, M['foot'])
-prism('Stormwater_drain', drain, -0.4, 0.15, M['drain'])
+prism('Stormwater_drain', drain, 0.15, 0.156, M['drain'])
 prism('Median_kerb', med_kerb, -0.4, 0.18, M['kerb'])
 prism('Median_green', med_grass, -0.4, 0.15, M['grass'])
 prism('Green_areas', green, -0.4, 0.25, M['grass'])
