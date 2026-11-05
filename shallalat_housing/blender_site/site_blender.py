@@ -111,35 +111,43 @@ nopark = core.buffer(9.0)
 SEC = {12: dict(foot=2.0, plant=2.85, kerb=3.0, park=None),
        15: dict(foot=1.8, plant=2.10, kerb=2.25, park=4.5),
        20: dict(foot=2.4, plant=3.45, kerb=3.6, park=6.0)}
-edges = {12: [], 15: [], 20: []}
+import numpy as np
+from shapely.geometry.polygon import orient as _orient
+KEYS = ('foot', 'plant', 'kerb', 'park')
+VAL = {T: [SEC[T][k] or SEC[T]['kerb'] for k in KEYS] for T in SEC}   # 12 m: no parking -> park = kerb line
+STEP, HALF = 0.5, 16          # smoothing window +-8 m -> ~16 m long realistic taper
+strips = {k: [] for k in KEYS}
 for P in polys(props):
+    P = _orient(P, 1.0)
     for ring in [P.exterior, *P.interiors]:
-        ring = ring.segmentize(1.0)
-        cs = list(ring.coords)
-        run, cur = [], None
-        for (xa, ya), (xb, yb) in zip(cs[:-1], cs[1:]):
-            L = math.hypot(xb - xa, yb - ya)
-            if L < 1e-6: continue
-            mx, my = (xa + xb) / 2, (ya + yb) / 2; nx, ny = -(yb - ya) / L, (xb - xa) / L
-            T = None
-            for sg in (1, -1):
-                q = Point(mx + sg * nx * 5, my + sg * ny * 5)
-                if road.contains(q):
-                    T = 20 if zone20.contains(q) else 15 if zone15.contains(q) else 12
-                    break
-            if T != cur:
-                if cur and len(run) > 1: edges[cur].append(LineString(run))
-                run, cur = [(xa, ya)], T
-            run.append((xb, yb))
-        if cur and len(run) > 1: edges[cur].append(LineString(run))
-E_ = {T: unary_union(v) for T, v in edges.items()}
-band = lambda T, d: E_[T].buffer(d, cap_style='flat', join_style='round').intersection(road) if not E_[T].is_empty else Polygon()
-drain = unary_union([band(T, 0.4) for T in SEC])
-foot = unary_union([band(T, SEC[T]['foot']) for T in SEC]).difference(drain)
-side = unary_union([band(T, SEC[T]['kerb']) for T in SEC])
-plant = unary_union([band(T, SEC[T]['plant']) for T in SEC]).difference(foot).difference(drain)
-kerb = side.difference(plant).difference(foot).difference(drain)
-park15 = unary_union([band(T, SEC[T]['park']) for T in (15, 20)]).difference(side).difference(nopark).difference(med20)
+        pts = np.array(ring.segmentize(STEP).coords)[:-1]
+        n = len(pts)
+        if n < 4: continue
+        nxt = np.roll(pts, -1, axis=0); d = nxt - pts; L = np.hypot(d[:, 0], d[:, 1]); L[L == 0] = 1e-9
+        sn = np.stack([d[:, 1] / L, -d[:, 0] / L], 1)          # right-hand normal = outward of props
+        vn = sn + np.roll(sn, 1, axis=0); vl = np.hypot(vn[:, 0], vn[:, 1]); vl[vl == 0] = 1; vn /= vl[:, None]
+        W = np.zeros((n, 4))
+        for i in range(n):
+            mx, my = (pts[i] + nxt[i]) / 2
+            q = Point(mx + sn[i, 0] * 5, my + sn[i, 1] * 5)
+            if road.contains(q):
+                T = 20 if zone20.contains(q) else 15 if zone15.contains(q) else 12
+                W[i] = VAL[T]
+        k = np.ones(2 * HALF + 1) / (2 * HALF + 1)
+        Ws = np.stack([np.convolve(np.concatenate([W[-HALF:, j], W[:, j], W[:HALF, j]]), k, 'valid') for j in range(4)], 1)
+        Wv = (Ws + np.roll(Ws, 1, axis=0)) / 2                 # per-vertex widths
+        for j, key in enumerate(KEYS):
+            off = pts + vn * Wv[:, j:j + 1]
+            qs = [Polygon([pts[i], pts[(i + 1) % n], off[(i + 1) % n], off[i]]) for i in range(n) if Wv[i, j] > 0.02 or Wv[(i + 1) % n, j] > 0.02]
+            qs = [q.buffer(0) for q in qs]
+            strips[key] += [q for q in qs if not q.is_empty]
+S = {k: unary_union(v).buffer(0.02).buffer(-0.02).intersection(road) for k, v in strips.items()}
+drain = props.buffer(0.4, join_style='round').intersection(S['foot'])
+foot = S['foot'].difference(drain)
+side = S['kerb']
+plant = S['plant'].difference(S['foot'])
+kerb = side.difference(S['plant'])
+park15 = S['park'].difference(side).difference(nopark).difference(med20)
 park15 = big(park15, 15)
 parkline = park15.buffer(0.1).difference(park15).difference(side.buffer(0.05)).intersection(road).difference(med20)
 parkline = parkline.union(unary_union(ticks).intersection(park15))
