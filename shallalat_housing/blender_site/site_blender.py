@@ -51,6 +51,25 @@ big = lambda g, a: unary_union([p for p in polys(g) if p.area > a])
 props = site.difference(road).difference(median)
 props = big(props.buffer(-0.6, join_style='mitre').buffer(0.6, join_style='mitre'), 60)
 road = road.union(site.difference(props).difference(median))
+# narrow pedestrian fingers of the road hatch -> part of the adjacent plaza; footpath runs straight past
+narrow0 = big(road.difference(road.buffer(-5.0).buffer(5.0, join_style='round')).difference(median.buffer(12)), 40)
+fill = []
+_pu = props.union(narrow0)
+for nk in polys(narrow0):
+    side_ = [p for p in polys(_pu) if p.intersects(nk)][0]
+    other = props.difference(side_.buffer(0.5))
+    L_ = road.intersection(nk.buffer(25))
+    bd = side_.boundary.intersection(L_.buffer(0.5)).difference(nk.buffer(1))
+    ds = sorted(other.distance(Point(c)) for g_ in getattr(bd, 'geoms', [bd]) for c in getattr(g_, 'coords', []))
+    if not ds: continue
+    Wm = ds[len(ds) // 2]
+    fill.append(L_.difference(other.buffer(Wm + 0.05, join_style='round')))
+    print('finger', round(nk.centroid.x), round(nk.centroid.y), 'road width', round(Wm, 2))
+fill = unary_union(fill).intersection(road) if fill else Polygon()
+ped = narrow0.union(fill)
+props = props.union(ped)
+road = unary_union(polys(shapely.make_valid(road.difference(ped)))).buffer(0)
+props = unary_union(polys(shapely.make_valid(props))).buffer(0)
 b = lambda d: props.buffer(d, join_style='mitre', mitre_limit=2.0)
 drain = road.intersection(b(0.4))
 def polys(g):
@@ -105,7 +124,7 @@ zone15 = big(zone15, 400)
 zone12 = road.difference(zone15).difference(zone20)
 core = road.union(median).difference(zone20).difference(props.buffer(8.2)).buffer(0.5)   # junction / wide areas
 core = big(core, 20)
-nopark = core.buffer(9.0)
+nopark = core.buffer(9.0).union(towers.buffer(20))   # no parking along the tower-zone road
 # ---- edge-based sections: every block edge gets the section of the road it faces;
 # changes happen at a single radial cut on the block corner (flat caps) -> clean junctions
 SEC = {12: dict(foot=2.0, plant=2.85, kerb=3.0, park=None),
@@ -136,14 +155,14 @@ for P in polys(props):
                 T = 20 if zone20.contains(q) else 15 if zone15.contains(q) else 12
                 W[i] = VAL[T]
         k = np.ones(2 * HALF + 1) / (2 * HALF + 1)
-        Ws = np.stack([np.convolve(np.concatenate([W[-HALF:, j], W[:, j], W[:HALF, j]]), k, 'valid') for j in range(4)], 1)
+        Ws = np.stack([np.convolve(np.pad(W[:, j], HALF, mode='wrap'), k, 'valid') for j in range(4)], 1)
         Wv = (Ws + np.roll(Ws, 1, axis=0)) / 2                 # per-vertex widths
         for j, key in enumerate(KEYS):
             off = pts + vn * Wv[:, j:j + 1]
             qs = [Polygon([pts[i], pts[(i + 1) % n], off[(i + 1) % n], off[i]]) for i in range(n) if Wv[i, j] > 0.02 or Wv[(i + 1) % n, j] > 0.02]
             qs = [q.buffer(0) for q in qs]
             strips[key] += [q for q in qs if not q.is_empty]
-narrow = big(road.difference(road.buffer(-5.0).buffer(5.0, join_style='round')).difference(zone20.buffer(1.0)), 40)
+narrow = Polygon()
 S = {k: unary_union(v).buffer(0.05).buffer(-0.05).intersection(road).difference(narrow).simplify(0.03) for k, v in strips.items()}
 drain = props.buffer(0.4, join_style='round').intersection(S['foot'])
 foot = S['foot'].union(narrow)          # drain is laid on top as an overlay
@@ -325,6 +344,7 @@ prism('Parking_marking', parkline, 0.0, 0.006, M['dash'])
 prism('Kerb', kerb, -0.4, 0.15, M['kerb'])
 prism('Tree_strip', plant, -0.4, 0.10, M['plant'])
 prism('Footpath', foot, -0.4, 0.15, M['foot'])
+prism('Pedestrian_paving', ped, -0.4, 0.25, M['paved'])
 prism('Stormwater_drain', drain, 0.15, 0.156, M['drain'])
 prism('Median_kerb', med_kerb, -0.4, 0.18, M['kerb'])
 prism('Median_green', med_grass, -0.4, 0.15, M['grass'])
