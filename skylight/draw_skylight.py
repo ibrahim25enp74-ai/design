@@ -318,18 +318,29 @@ def slope_pt(x, d):
     return (x + n[0] * d, top_y(x) + n[1] * d)
 
 
-def house(v, x_edge, side, depth=800, drop=550):
-    """RC roof slab + wall of one house in section. side=-1 house on the left."""
-    x_far = x_edge + side * depth
-    slab = [(x_edge, 0), (x_far, 0), (x_far, -200), (x_edge, -200)]
+PH = 1000.0      # parapet height incl. RC cap (top of cap = ±0.00) - verify on site
+CAP_W, CAP_H, BRICK = 300.0, 200.0, 240.0
+
+
+def house(v, x_edge, side, depth=800, drop=350):
+    """Parapet (brick + RC cap) on the RC roof slab of one house. side=-1 house on the left.
+    x_edge = courtyard face of the RC cap; the bearing axis is the parapet axis."""
+    ax_ = x_edge - side * CAP_W / 2
+    x_far = ax_ + side * depth
+    cap = [(ax_ - CAP_W / 2, 0), (ax_ + CAP_W / 2, 0), (ax_ + CAP_W / 2, -CAP_H), (ax_ - CAP_W / 2, -CAP_H)]
+    v.pline(cap, "A-CONC", closed=True)
+    v.hatch(cap, spacing=1.0)
+    br = [(ax_ - BRICK / 2, -CAP_H), (ax_ + BRICK / 2, -CAP_H), (ax_ + BRICK / 2, -PH), (ax_ - BRICK / 2, -PH)]
+    v.pline(br, "A-CONC", closed=True)
+    v.hatch(br, spacing=1.0, angle=-45)
+    xo = ax_ - side * BRICK / 2       # courtyard face of brick / building face
+    slab = [(xo, -PH), (x_far, -PH), (x_far, -PH - 200), (xo, -PH - 200)]
     v.pline(slab, "A-CONC", closed=True)
     v.hatch(slab, spacing=1.6)
-    wall_in = x_edge + side * 390   # 240 wall + plaster, outer face at slab edge
-    w = [(x_edge, -200), (wall_in, -200), (wall_in, -drop), (x_edge, -drop)]
+    w = [(xo, -PH - 200), (xo + side * 390, -PH - 200), (xo + side * 390, -PH - drop), (xo, -PH - drop)]
     v.pline([w[0], w[3]], "A-CONC"); v.pline([w[1], w[2]], "A-CONC")
     v.hatch(w, spacing=1.2, angle=-45)
-    # break line
-    v.line((x_far, 30), (x_far, -230), "S-STEEL-THIN")
+    v.line((x_far, -PH + 30), (x_far, -PH - 230), "S-STEEL-THIN")
 
 
 # ======================================================================= views
@@ -365,7 +376,7 @@ for a, b in ((TX[0], TX[1]), (TX[-2], TX[-1])):
 # base plates
 for x in TX:
     for y in (0, SPAN):
-        P.pline([(x - 100, y - 100), (x + 100, y - 100), (x + 100, y + 100), (x - 100, y + 100)],
+        P.pline([(x - 125, y - 100), (x + 125, y - 100), (x + 125, y + 100), (x - 125, y + 100)],
                 "S-STEEL-THIN", closed=True)
 # slope arrows
 for xm in (BAY * 3.5,):
@@ -391,15 +402,16 @@ P.dim((LENGTH + 700, 0), (LENGTH + 700, SPAN), -7, f"{SPAN:.0f}  bearing axes")
 
 
 # ---------------------------------------------------------------- 2 truss section 1:20
-sec = View("FRONT VIEW", 25, (118, 272), (0, 0), "across the 6 m - typical truss, 8 No.")
-sec.title_xy = (35, 352)
+sec = View("FRONT VIEW", 25, (118, 292), (0, 0), "across the 6 m - typical truss, 8 No.")
+sec.title_xy = (35, 358)
 views.append(sec)
 S = sec
 house(S, -EDGE, -1, depth=700)
 house(S, SPAN + EDGE, +1, depth=700)
-S.text((-EDGE - 400, -800), "HOUSE 1", 2.6, "center", "center", bold=True)
-S.text((SPAN + EDGE + 400, -800), "HOUSE 2", 2.6, "center", "center", bold=True)
-S.text((SPAN / 2, -620), "COURTYARD BELOW", 2.4, "center", "center", layer="A-DIM", bold=True)
+S.text((-EDGE - 500, -PH + 200), "HOUSE 1\nROOF", 2.6, "center", "center", bold=True)
+S.text((SPAN + EDGE + 550, -PH + 200), "HOUSE 2\nROOF", 2.6, "center", "center", bold=True)
+S.text((SPAN / 2, -1150), "COURTYARD BELOW", 2.4, "center", "center", layer="A-DIM", bold=True)
+S.leader((SPAN + 120, -450), (SPAN + 600, -250), "PARAPET (solid brick 240)\n+ RC cap beam 300x200", 2.0)
 # centre lines
 for pts, _ in truss_members():
     S.pline(pts, "S-CENTER")
@@ -419,8 +431,7 @@ for x in (PX[1], PX[3], PX[5]):
 # base plates
 for x in (0, SPAN):
     S.pline([(x - 100, 0), (x + 100, 0), (x + 100, PL_T), (x - 100, PL_T)], "S-STEEL", closed=True)
-    for ax_ in (-70, 70):
-        S.line((x + ax_, PL_T + 15), (x + ax_, -110), "S-HIDDEN")
+    S.line((x, PL_T + 15), (x, -120), "S-HIDDEN")
 # polycarbonate + ridge cap
 for side in (-1, 1):
     x0 = 0 if side < 0 else SPAN
@@ -448,27 +459,29 @@ S.leader((2500, YB - B / 2), (2200, -470), "BOTTOM CHORD  SHS 80x80x3", 2.2, "ri
 S.leader((4500, (YB + top_y(4500)) / 2), (3900, -470), "VERTICALS + DIAGONALS  SHS 80x80x2", 2.2, "left")
 S.leader((-B / 2, 380), (-650, 900), "END POST SHS 80x80x3\n+ alu. louvers", 2.0)
 S.leader((PX[1], top_y(PX[1]) + 20), (700, 1250), "PURLIN SHS 80x80x2", 2.0, "right")
-S.leader((-60, PL_T / 2), (-650, 260), "BASE PL 200x200x12\n4 M12 anchors", 2.0)
+S.leader((-60, PL_T / 2), (-650, 260), "BASE PL 250x200x12\n2 M12 into RC cap", 2.0)
 # dims
 S.dim_chain([(x, -10) for x in PX], -4)
 S.dim((0, -10), (SPAN, -10), -9, f"{SPAN:.0f}  bearing axes")
-S.dim((-EDGE, -200), (SPAN + EDGE, -200), -7, f"{SPAN - 2 * EDGE:.0f}  clear gap  (verify on site)")
+S.dim((-EDGE, -CAP_H), (SPAN + EDGE, -CAP_H), -8, f"{SPAN - 2 * EDGE:.0f}  clear between parapets  (verify on site)")
+S.dim((-EDGE - 1000, -PH), (-EDGE - 1000, 0), -4, f"{PH:.0f}")
 S.dim_chain([(SPAN + 420, YB), (SPAN + 420, YE), (SPAN + 420, YR)], -4)
-S.level(-EDGE - 100, 0, "±0.00 top of slab", -1)
+S.level(-EDGE - 100, 0, "±0.00 top of parapet", -1)
+S.level(-EDGE - 400, -PH, f"-{PH / 1000:.2f} house roof (verify)", -1)
 S.level(SPAN + EDGE + 120, top_face(SPAN), f"+{top_face(SPAN) / 1000:.2f} eave", 1)
 S.level(SPAN / 2 - 30, YR + 300, f"+{(top_face(SPAN / 2) + SHEET_T) / 1000:.2f} ridge", -1)
 S.text((1900, top_face(1900) + 70), "slope 9.5° (1:6)", 2.2, "center", "bottom", math.degrees(SLOPE), "A-DIM")
-for i, x in enumerate((0, SPAN)):
-    S.grid((x, -1000), (x, -880), "AB"[i], at_start=True)
+
 
 # ---------------------------------------------------------------- 3 side elevation 1:50
 el = View("SIDE VIEW", 50, (55, 152), (0, -6000), "along the 15 m - louvred ventilation band")
 el.title_xy = (35, 210)
 views.append(el)
 E_ = el
-slab = [(-500, 0), (LENGTH + 500, 0), (LENGTH + 500, -200), (-500, -200)]
-E_.pline(slab, "A-CONC", closed=True)
-E_.hatch(slab, spacing=1.2)
+cap = [(-500, 0), (LENGTH + 500, 0), (LENGTH + 500, -CAP_H), (-500, -CAP_H)]
+E_.pline(cap, "A-CONC", closed=True); E_.hatch(cap, spacing=1.0)
+br = [(-500, -CAP_H), (LENGTH + 500, -CAP_H), (LENGTH + 500, -PH), (-500, -PH)]
+E_.pline(br, "A-CONC", closed=True); E_.hatch(br, spacing=1.6, angle=-45)
 roof = [(-40, top_face(0) - OVERHANG * math.tan(SLOPE)), (LENGTH + 40, top_face(0) - OVERHANG * math.tan(SLOPE)),
         (LENGTH + 40, top_face(SPAN / 2) + SHEET_T), (-40, top_face(SPAN / 2) + SHEET_T)]
 E_.fill(roof, color="#bfe6f3")
@@ -483,14 +496,16 @@ for a, b in zip(TX, TX[1:]):
         E_.line((a + B / 2 + 20, y), (b - B / 2 - 20, y), "A-LOUVER")
 for i, x in enumerate(TX):
     E_.grid((x, 1750), (x, top_face(SPAN / 2) + 60), str(i + 1), at_start=True)
-    E_.pline([(x - 100, 0), (x + 100, 0), (x + 100, PL_T), (x - 100, PL_T)], "S-STEEL-THIN", closed=True)
-E_.dim_chain([(x, -200) for x in TX], -4)
+    E_.pline([(x - 125, 0), (x + 125, 0), (x + 125, PL_T), (x - 125, PL_T)], "S-STEEL-THIN", closed=True)
+E_.dim_chain([(x, -PH) for x in TX], -4)
 E_.dim((LENGTH + 500, 0), (LENGTH + 500, top_face(0)), -4, f"{top_face(0):.0f}")
 E_.dim((LENGTH + 500, top_face(0)), (LENGTH + 500, top_face(SPAN / 2) + SHEET_T), -4,
        f"{top_face(SPAN / 2) + SHEET_T - top_face(0):.0f}")
-E_.leader((BAY * 0.5, (YB + YE) / 2), (BAY * 0.2, -1300), "alu. weather louvers + insect mesh", 2.0, "left")
-E_.leader((BAY * 3.5, YB), (BAY * 3.4, -1300), "SILL SHS 80x80x2", 2.0, "left")
-E_.leader((BAY * 5.5, YE), (BAY * 5.3, -1300), "EAVE PURLIN SHS 80x80x2", 2.0, "left")
+E_.leader((BAY * 0.5, (YB + YE) / 2), (BAY * 0.2, -1900), "alu. weather louvers + insect mesh", 2.0, "left")
+E_.leader((BAY * 3.5, YB), (BAY * 3.4, -1900), "SILL SHS 80x80x2", 2.0, "left")
+E_.leader((BAY * 5.5, YE), (BAY * 5.3, -1900), "EAVE PURLIN SHS 80x80x2", 2.0, "left")
+E_.leader((BAY * 6.6, -500), (BAY * 6.8, -1900), "PARAPET + RC cap", 2.0, "left")
+E_.dim((LENGTH + 500, -PH), (LENGTH + 500, 0), -4, f"{PH:.0f}")
 
 # ---------------------------------------------------------------- 4 isometric (no scale)
 iso = View("3D VIEW", 1, (0, 0), (25000, -6000), "not to scale")
@@ -504,12 +519,21 @@ def pj(x, y, z):  # x along length, y across, z up  ->  iso paper mm
     return ((x * c30 - y * c30) * k, (x * s30 + y * s30 + z * 1.0) * k)
 
 
-for y0, y1 in ((-1800, -EDGE), (SPAN + EDGE, SPAN + 1800)):  # houses as simple blocks
-    for z in (0, -1500):
+def box3(x0, x1, y0, y1, z0, z1, layer="A-CONC"):
+    for z in (z0, z1):
+        iso.pline([pj(x0, y0, z), pj(x1, y0, z), pj(x1, y1, z), pj(x0, y1, z)], layer, closed=True)
+    for x, y in ((x0, y0), (x1, y0), (x1, y1), (x0, y1)):
+        iso.line(pj(x, y, z0), pj(x, y, z1), layer)
+
+
+for yc in (0, SPAN):  # parapets with RC cap under the bearings
+    box3(-800, LENGTH + 800, yc - CAP_W / 2, yc + CAP_W / 2, -PH, 0)
+for y0, y1 in ((-1800, BRICK / 2), (SPAN - BRICK / 2, SPAN + 1800)):  # houses as simple blocks
+    for z in (-PH, -PH - 1500):
         iso.pline([pj(-800, y0, z), pj(LENGTH + 800, y0, z), pj(LENGTH + 800, y1, z), pj(-800, y1, z)],
                   "A-CONC", closed=True)
     for x, y in ((-800, y0), (LENGTH + 800, y0), (LENGTH + 800, y1), (-800, y1)):
-        iso.line(pj(x, y, 0), pj(x, y, -1500), "A-CONC")
+        iso.line(pj(x, y, -PH), pj(x, y, -PH - 1500), "A-CONC")
 for side in (0, 1):  # glazing planes
     ye, z_e = (0, YE) if side == 0 else (SPAN, YE)
     iso.fill([pj(0, ye, z_e), pj(LENGTH, ye, z_e), pj(LENGTH, SPAN / 2, YR), pj(0, SPAN / 2, YR)],
@@ -527,8 +551,8 @@ for a, b in ((TX[0], TX[1]), (TX[-2], TX[-1])):
     for y0, y1 in ((0, SPAN / 2), (SPAN / 2, SPAN)):
         iso.line(pj(a, y0, top_y(y0)), pj(b, y1, top_y(y1)), "S-BRACE")
         iso.line(pj(a, y1, top_y(y1)), pj(b, y0, top_y(y0)), "S-BRACE")
-iso.text(pj(LENGTH + 800, -1000, -1500), "HOUSE 1", 2.6, "left", "center", bold=True)
-iso.text(pj(-800, SPAN + 1000, -1500), "HOUSE 2", 2.6, "right", "center", bold=True)
+iso.text(pj(LENGTH + 800, -1000, -PH - 700), "HOUSE 1", 2.6, "left", "center", bold=True)
+iso.text(pj(-800, SPAN + 1000, -PH - 700), "HOUSE 2", 2.6, "right", "center", bold=True)
 _all = [p for it in iso.items if it[0] in ("pl", "fill") for p in it[1]]
 _x0, _x1 = min(p[0] for p in _all), max(p[0] for p in _all)
 _y0, _y1 = min(p[1] for p in _all), max(p[1] for p in _all)
@@ -834,12 +858,13 @@ LEGEND = [
     ("Verticals, diagonals", "SHS 80x80x2"),
     ("Purlins (7 lines), bottom ties (3), sills (2)", "SHS 80x80x2"),
     ("Bracing, end bays", "Ø12 rod"),
-    ("Base plates (16 No.)", "PL 200x200x12 + 4 M12"),
+    ("Base plates (16 No.)", "PL 250x200x12 + 2 M12 chem."),
+    ("Bearing: parapet, solid brick 240", "+ RC cap beam 300x200, 4Ø12"),
     ("Glazing", "16 mm multiwall polycarbonate"),
     ("Sides 0.5 m", "alu. louvers + insect mesh"),
     ("", ""),
     ("Trusses: 8 No. @ 2143 mm  |  slope 9.5° (1:6)", ""),
-    ("Dimensions in mm, levels in m (±0.00 = top of house roof slab)", ""),
+    ("Dimensions in mm, levels in m (±0.00 = top of parapet cap)", ""),
 ]
 
 
