@@ -1,5 +1,5 @@
-"""Structural check of the 6.70 x 15.00 m skylight: portal frames of SHS 80x80
-every 1.50 m with a steel tie rod at eave level (tension only).
+"""Structural check of the 6.70 x 15.00 m skylight: portal frames of SHS 80x80x5
+every 1.50 m (pinned bases, no eave tie) with a short collar tie SHS 80x80x2 under the ridge.
 
 2D frame (beam elements, direct stiffness), EN 1993-1-1, S235.
 Run:  python3 frame_calc.py
@@ -29,7 +29,7 @@ def shs(b, t):
                 i=math.sqrt(I / A), kg=A * 7850)
 
 
-FRAME = shs(0.080, 0.004)        # legs + rafters
+FRAME = shs(0.080, 0.005)        # legs + rafters
 PURLIN = shs(0.080, 0.002)
 TIE_D = 0.016
 TIE_A = math.pi * TIE_D ** 2 / 4
@@ -47,6 +47,9 @@ if SPAN / 2 not in xs:   # make sure the ridge is a node
 iBL, iBR = 0, len(nodes) - 1
 iKL, iKR = 1, len(nodes) - 2
 beams = [(iBL, iKL)] + [(k, k + 1) for k in range(1, len(nodes) - 2)] + [(iKR, iBR)]
+
+
+COLLAR = (6, 8)  # collar tie between rafter nodes 6 and 8 (1.12 m long, 83 mm below the ridge), SHS 80x80x2
 
 
 def analyse(w_line, tie=True):
@@ -73,6 +76,12 @@ def analyse(w_line, tie=True):
         (x1, y1), (x2, y2) = nodes[iKL], nodes[iKR]
         k = E * TIE_A / (x2 - x1)
         d = [3*iKL, 3*iKR]
+        K[np.ix_(d, d)] += k * np.array([[1, -1], [-1, 1]])
+    if COLLAR:
+        a, b = COLLAR
+        (x1, y1), (x2, y2) = nodes[a], nodes[b]
+        k = E * PURLIN["A"] / (x2 - x1)
+        d = [3*a, 3*b]
         K[np.ix_(d, d)] += k * np.array([[1, -1], [-1, 1]])
     # nodal loads from purlins + self weight
     trib = SPAN / N_PURLIN_SP
@@ -119,13 +128,11 @@ def check(name, w, tie):
 
 print(f"frames: {N_FRAMES} @ {BAY} m, cells {SPAN / N_PURLIN_SP:.3f} m, slope "
       f"{math.degrees(math.atan(RISE / (SPAN / 2))):.1f} deg; frame {FRAME['name']} ({FRAME['kg']:.2f} kg/m), "
-      f"purlins {PURLIN['name']}, tie rod D{TIE_D*1e3:.0f}")
-Nt = check("ULS 1.35G+1.5Q (tie active)", line_load(1.35, 1.5, 0), True)
-check("ULS 1.0G-1.5W uplift (tie slack)", line_load(1.0, 0, 1.5), False)
-check("SLS G+Q (tie active)", line_load(1.0, 1.0, 0), True)
-check("SLS G-W uplift (tie slack)", line_load(1.0, 0, 1.0), False)
-print(f"tie rod D{TIE_D*1e3:.0f}: N={Nt:.1f} kN, capacity (threaded, As=157 mm2, 0.9*400/1.25) = "
-      f"{0.9*157e-6*400e3/1.25:.1f} kN")
+      f"purlins {PURLIN['name']}, collar between nodes {COLLAR}")
+check("ULS 1.35G+1.5Q", line_load(1.35, 1.5, 0), False)
+check("ULS 1.0G-1.5W uplift", line_load(1.0, 0, 1.5), False)
+check("SLS G+Q   (limit L/200 = 33 mm)", line_load(1.0, 1.0, 0), False)
+check("SLS G-W", line_load(1.0, 0, 1.0), False)
 
 # purlins, simply supported over 1.5 m
 trib = SPAN / N_PURLIN_SP
