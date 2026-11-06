@@ -14,7 +14,7 @@ BAY = 1.50           # frame spacing -> 11 frames
 LEG = 0.50           # leg below the top of the parapet (house roof)
 EAVE = 0.60          # eave node above the top of the parapet (room for vent windows)
 RISE = 0.50          # ridge above eave
-N_PURLIN_SP = 12     # purlin spaces across -> 0.56 m cells (even: ridge purlin)
+N_PURLIN_SP = 10     # purlin spaces across -> 0.67 m cells (even: ridge purlin); mid-bay glazing bars give 0.75 x 0.67 cells
 N_FRAMES = round(LENGTH / BAY) + 1
 
 E, FY = 210e6, 235e3     # kPa
@@ -49,7 +49,7 @@ iKL, iKR = 1, len(nodes) - 2
 beams = [(iBL, iKL)] + [(k, k + 1) for k in range(1, len(nodes) - 2)] + [(iKR, iBR)]
 
 
-COLLAR = (6, 8)  # collar tie between rafter nodes 6 and 8 (1.12 m long, 83 mm below the ridge), SHS 80x80x2
+COLLAR = (5, 7)  # collar tie between rafter nodes 5 and 7 (1.34 m long, 0.10 m below the ridge), SHS 80x80x2
 
 
 def analyse(w_line, tie=True):

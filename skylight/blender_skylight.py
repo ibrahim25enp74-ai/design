@@ -16,14 +16,15 @@ PAR_AX, LEG_OFF = 6.0, 0.35
 SPAN = PAR_AX + 2 * LEG_OFF           # 6.70
 LENGTH, BAY = 15.0, 1.5
 FX = [i * BAY for i in range(11)]
-N_CELL = 12
+N_CELL = 10
 PX = [i * SPAN / N_CELL for i in range(N_CELL + 1)]
+MX = [x + BAY / 2 for x in FX[:-1]]          # mid-bay glazing bars -> 0.75 x 0.67 cells
 B = 0.08
 PH = 0.50                             # house roof below top of parapet
 YE, YR, YS = 0.60, 1.10, 0.10         # eave, ridge, sill rail (centre lines)
 SLOPE = math.atan((YR - YE) / (SPAN / 2))
 COPE_W, COPE_H, BRICK = 0.40, 0.10, 0.24
-CX = (PX[5], PX[7])                   # collar tie ends
+CX = (PX[4], PX[6])                   # collar tie ends
 OVER, SHEET_T = 0.10, 0.016
 HOUSE_H = 3.5
 
@@ -60,9 +61,9 @@ def mat(name, rgb, alpha=1.0, rough=0.5, metal=0.0, transmission=0.0):
 
 M = {
     "steel": mat("Steel SHS (painted)", (0.18, 0.2, 0.22), rough=0.45, metal=0.6),
-    "pc": mat("Polycarbonate 16mm opal", (0.82, 0.92, 0.96), alpha=0.45, rough=0.25, transmission=0.6),
+    "pc": mat("Polycarbonate 16mm black smoke", (0.015, 0.016, 0.018), alpha=0.82, rough=0.12, transmission=0.35),
     "alu": mat("Aluminium", (0.75, 0.76, 0.78), rough=0.3, metal=1.0),
-    "glass": mat("Window glass", (0.7, 0.85, 0.9), alpha=0.3, rough=0.05, transmission=0.9),
+    "glass": mat("Window glass black", (0.01, 0.01, 0.012), alpha=0.85, rough=0.05, transmission=0.3),
     "conc": mat("Concrete / plaster", (0.78, 0.75, 0.7), rough=0.9),
     "brick": mat("Brick parapet", (0.72, 0.6, 0.45), rough=0.9),
     "floor": mat("Courtyard tiles", (0.6, 0.57, 0.52), rough=0.8),
@@ -152,6 +153,10 @@ for k, x in enumerate(FX):
 for j, y in enumerate(PX):
     roll = 0.0 if abs(y - SPAN / 2) < 1e-6 else (SLOPE if y < SPAN / 2 else -SLOPE)
     beam(f"Purlin {j + 1:02d}", (0, y, top_y(y)), (LENGTH, y, top_y(y)), B, B, "Purlins + rails", "steel", roll)
+for k, x in enumerate(MX):
+    for j in range(N_CELL):
+        y0, y1 = PX[j], PX[j + 1]
+        beam(f"Mid-bay bar {k + 1:02d}", (x, y0, top_y(y0)), (x, y1, top_y(y1)), B, B, "Purlins + rails", "steel")
 for y in (0.0, SPAN):
     beam(f"Sill rail y={y:.2f}", (0, y, YS), (LENGTH, y, YS), B, B, "Purlins + rails", "steel")
 for a, b in ((FX[0], FX[1]), (FX[-2], FX[-1])):
@@ -192,17 +197,30 @@ sun = bpy.data.objects.new("Sun", bpy.data.lights.new("Sun", "SUN"))
 sun.data.energy = 4.0
 sun.rotation_euler = (math.radians(50), math.radians(15), math.radians(-35))
 scene.collection.objects.link(sun)
-cam = bpy.data.objects.new("Camera", bpy.data.cameras.new("Camera"))
-cam.data.lens = 28
-cam.location = (-6.5, -7.5, 6.0)
-scene.collection.objects.link(cam)
-target = Vector((LENGTH / 2, SPAN / 2, -0.6))
-cam.rotation_mode = "QUATERNION"
-cam.rotation_quaternion = (target - cam.location).to_track_quat("-Z", "Y")
-scene.camera = cam
+# name, camera location, target, focal length (mm)
+FLOOR = -PH - HOUSE_H
+SHOTS = [
+    ("01_aerial", (-6.5, -7.5, 6.0), (LENGTH / 2, SPAN / 2, -0.6), 28),
+    ("02_courtyard_looking_up", (1.2, SPAN / 2 - 0.8, FLOOR + 1.6), (LENGTH * 0.75, SPAN / 2 + 0.3, 0.9), 18),
+    ("03_rooftop_side_windows", (3.0, -4.5, 1.1), (9.0, 0.0, 0.2), 24),
+    ("04_end_view", (-9.0, SPAN / 2, 1.6), (LENGTH / 2, SPAN / 2, -0.3), 35),
+    ("05_leg_parapet_closeup", (2.6, -1.3, 0.35), (1.5, 0.15, -0.15), 30),
+    ("06_aerial_top", (LENGTH / 2 + 0.01, SPAN / 2 - 9.0, 14.0), (LENGTH / 2, SPAN / 2, 0.0), 30),
+]
+cams = []
+for name, loc, tgt, lens in SHOTS:
+    cam = bpy.data.objects.new(f"Cam {name}", bpy.data.cameras.new(f"Cam {name}"))
+    cam.data.lens = lens
+    cam.data.clip_start = 0.05
+    cam.location = loc
+    cam.rotation_mode = "QUATERNION"
+    cam.rotation_quaternion = (Vector(tgt) - Vector(loc)).to_track_quat("-Z", "Y")
+    coll("Cameras").objects.link(cam)
+    cams.append((name, cam))
+scene.camera = cams[0][1]
 scene.render.resolution_x, scene.render.resolution_y = 1600, 900
 scene.render.engine = "CYCLES"
-scene.cycles.samples = 48
+scene.cycles.samples = 40
 scene.cycles.use_denoising = True
 
 # ----------------------------------------------------------------- save / export / preview
@@ -211,5 +229,9 @@ if "--no-save" not in sys.argv:
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(here, "SKYLIGHT_6x15.blend"))
     bpy.ops.export_scene.gltf(filepath=os.path.join(here, "SKYLIGHT_6x15.glb"), export_format="GLB")
 if "--render" in sys.argv:
-    scene.render.filepath = os.path.join(here, "SKYLIGHT_6x15_render.png")
-    bpy.ops.render.render(write_still=True)
+    os.makedirs(os.path.join(here, "renders"), exist_ok=True)
+    for name, cam in cams:
+        scene.camera = cam
+        scene.render.filepath = os.path.join(here, "renders", f"shot_{name}.png")
+        bpy.ops.render.render(write_still=True)
+    scene.camera = cams[0][1]

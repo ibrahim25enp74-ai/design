@@ -20,8 +20,9 @@ LEG_OFF = 350.0                 # leg axis beyond the parapet axis, on the house
 SPAN = PAR_AX + 2 * LEG_OFF     # 6700 leg to leg
 LENGTH, BAY = 15000.0, 1500.0
 FX = [i * BAY for i in range(int(LENGTH / BAY) + 1)]          # 11 frames
-N_CELL = 12
-PX = [i * SPAN / N_CELL for i in range(N_CELL + 1)]           # purlins @ 558
+N_CELL = 10
+PX = [i * SPAN / N_CELL for i in range(N_CELL + 1)]           # purlins @ 670
+MX = [x + BAY / 2 for x in FX[:-1]]                           # mid-bay glazing bars -> 750 x 670 cells
 B = 80.0
 PL_T = 12.0
 PH = 500.0                      # leg below the top of the parapet (= parapet height)
@@ -31,7 +32,7 @@ SLOPE = math.atan((YR - YE) / (SPAN / 2))
 OVERHANG, SHEET_T = 100.0, 16.0
 COPE_W, COPE_H, BRICK = 400.0, 100.0, 240.0
 WIN_W, WIN_H = BAY - B, (YE - B / 2) - (YS + B / 2)            # 1420 x 420
-CX = (5 * SPAN / N_CELL, 7 * SPAN / N_CELL)                    # collar tie ends (purlin nodes 5 and 7)
+CX = (4 * SPAN / N_CELL, 6 * SPAN / N_CELL)                    # collar tie ends (purlin nodes 4 and 6)
 
 
 def top_y(x):
@@ -87,7 +88,7 @@ def square(v, c, ang, layer="S-STEEL-THIN"):
 slope_txt = f"{math.degrees(SLOPE):.1f}° (1:{SPAN / 2 / (YR - YE):.1f})"
 
 # ======================================================================= TOP VIEW 1:50
-P = View("TOP VIEW", 50, (55, 400), (0, 20000), "frames @ 1.50 m, purlins @ 0.56 m")
+P = View("TOP VIEW", 50, (55, 400), (0, 20000), f"frames @ 1.50 m, cells {BAY / 2 / 1000:.2f} x {SPAN / N_CELL / 1000:.2f} m")
 P.title_xy = (35, 578)
 for y0, y1, name in ((-900, LEG_OFF - COPE_W / 2, "HOUSE 1 - ROOF"),
                      (SPAN - LEG_OFF + COPE_W / 2, SPAN + 900, "HOUSE 2 - ROOF")):
@@ -98,9 +99,10 @@ for yc in (LEG_OFF, SPAN - LEG_OFF):
         outer = (yc < SPAN / 2 and yy < yc) or (yc > SPAN / 2 and yy > yc)
         P.line((-1000, yy), (LENGTH + 1000, yy), "A-CONC" if outer else "S-HIDDEN")
 roof = [(-40, -OVERHANG), (LENGTH + 40, -OVERHANG), (LENGTH + 40, SPAN + OVERHANG), (-40, SPAN + OVERHANG)]
-P.fill(roof, alpha=0.8)
+P.fill(roof, alpha=0.55, color="#555b60")
 P.shape(unary_union([box(x - B / 2, -B / 2, x + B / 2, SPAN + B / 2) for x in FX] +
-                    [box(FX[0], y - B / 2, FX[-1], y + B / 2) for y in PX]), "S-STEEL")
+                    [box(FX[0], y - B / 2, FX[-1], y + B / 2) for y in PX] +
+                    [box(x - B / 2, 0, x + B / 2, SPAN) for x in MX]), "S-STEEL")
 P.pline(roof, "A-GLAZ", closed=True)
 P.line((-40, SPAN / 2), (LENGTH + 40, SPAN / 2), "A-ALU")
 for a, b in ((FX[0], FX[1]), (FX[-2], FX[-1])):
@@ -120,16 +122,17 @@ for y0, y1 in ((SPAN / 2 - 300, 700), (SPAN / 2 + 300, SPAN - 700)):
 P.text((BAY * 8.5, SPAN / 2 + 110), "RIDGE", 2.2, "center", "bottom", layer="A-ALU", bold=True)
 P.leader((BAY * 0.5, SPAN * 0.25 - 400), (BAY * 1.5, -650), "Ø12 rod X-bracing in end bays, both slopes", 2.0)
 P.leader((BAY * 2.5, SPAN - 450), (BAY * 0.3, SPAN + 600),
-         "16 mm multiwall polycarbonate, ribs down the slope, alu. H-joints", 2.0, "left")
+         "16 mm multiwall polycarbonate, BLACK (smoke) tint, ribs down the slope", 2.0, "left")
 P.leader((BAY * 8.5, SPAN), (BAY * 8.6, SPAN + 600), "vent windows, both 15 m sides", 2.0, "left")
 for i, x in enumerate(FX):
     P.grid((x, -1250), (x, SPAN + 1200), str(i + 1))
 P.grid((-1600, 0), (LENGTH + 400, 0), "A")
 P.grid((-1600, SPAN), (LENGTH + 400, SPAN), "B")
 P.dim_chain([(x, SPAN + 1100) for x in FX], 0, h=2.0)
+P.dim_chain([(x, SPAN + 500) for x in sorted(FX[:3] + MX[:2])], 0, h=1.7)
 P.dim((FX[0], SPAN + 1100), (FX[-1], SPAN + 1100), 6, f"{LENGTH:.0f}  (11 frames, 10 bays @ 1500)")
 P.dim_chain([(LENGTH + 700, y) for y in PX], 0, h=1.7)
-P.dim((LENGTH + 700, 0), (LENGTH + 700, SPAN), -7, f"{SPAN:.0f}  leg axes  (12 cells @ {SPAN / N_CELL:.0f})")
+P.dim((LENGTH + 700, 0), (LENGTH + 700, SPAN), -7, f"{SPAN:.0f}  leg axes  ({N_CELL} cells @ {SPAN / N_CELL:.0f})")
 
 # ======================================================================= FRONT VIEW 1:25
 S = View("FRONT VIEW", 25, (118, 286), (0, 0), "across the width - typical frame, 11 No.")
@@ -170,7 +173,7 @@ for side in (-1, 1):
     b = (xr, top_face(xr))
     nx, ny = (math.sin(SLOPE) * side, math.cos(SLOPE))
     pts = [a, b, (b[0] + nx * SHEET_T, b[1] + ny * SHEET_T), (a[0] + nx * SHEET_T, a[1] + ny * SHEET_T)]
-    S.fill(pts, color="#bfe6f3"); S.pline(pts, "A-GLAZ", closed=True)
+    S.fill(pts, color="#3a3f44"); S.pline(pts, "A-GLAZ", closed=True)
 cap_h = top_face(SPAN / 2) + SHEET_T
 S.pline([(SPAN / 2 - 170, cap_h - 170 * math.tan(SLOPE) + 6), (SPAN / 2, cap_h + 22),
          (SPAN / 2 + 170, cap_h - 170 * math.tan(SLOPE) + 6)], "A-ALU")
@@ -208,7 +211,7 @@ br = [(-500, -COPE_H), (LENGTH + 500, -COPE_H), (LENGTH + 500, -PH), (-500, -PH)
 E_.pline(br, "A-CONC", closed=True); E_.hatch(br, spacing=1.6, angle=-45)
 roofE = [(-40, top_face(0) - OVERHANG * math.tan(SLOPE)), (LENGTH + 40, top_face(0) - OVERHANG * math.tan(SLOPE)),
          (LENGTH + 40, top_face(SPAN / 2) + SHEET_T), (-40, top_face(SPAN / 2) + SHEET_T)]
-E_.fill(roofE, color="#bfe6f3"); E_.pline(roofE, "A-GLAZ", closed=True)
+E_.fill(roofE, color="#6b7177"); E_.pline(roofE, "A-GLAZ", closed=True)
 for x in FX:
     E_.line((x - B / 2, -PH), (x - B / 2, 0), "S-HIDDEN"); E_.line((x + B / 2, -PH), (x + B / 2, 0), "S-HIDDEN")
 E_.shape(unary_union([box(x - B / 2, 0, x + B / 2, YE + B / 2) for x in FX] +
@@ -258,13 +261,15 @@ for y0, y1 in ((-1800, LEG_OFF + BRICK / 2), (SPAN - LEG_OFF - BRICK / 2, SPAN +
         iso.line(pj(x, y, -PH), pj(x, y, -PH - 1500), "A-CONC")
 for ye in (0, SPAN):
     iso.fill([pj(0, ye, YE), pj(LENGTH, ye, YE), pj(LENGTH, SPAN / 2, YR), pj(0, SPAN / 2, YR)],
-             alpha=0.55, color="#9fd6ea")
+             alpha=0.6, color="#4a5056")
     iso.fill([pj(0, ye, YS), pj(LENGTH, ye, YS), pj(LENGTH, ye, YE), pj(0, ye, YE)], alpha=0.35, color="#c9e9c9")
 for x in FX:
     iso.pline([pj(x, 0, -PH), pj(x, 0, YE), pj(x, SPAN / 2, YR), pj(x, SPAN, YE), pj(x, SPAN, -PH)], "S-STEEL")
     iso.line(pj(x, CX[0], top_y(CX[0])), pj(x, CX[1], top_y(CX[1])), "S-STEEL-THIN")
 for y in PX:
     iso.line(pj(0, y, top_y(y)), pj(LENGTH, y, top_y(y)), "S-STEEL-THIN")
+for x in MX:
+    iso.pline([pj(x, 0, YE), pj(x, SPAN / 2, YR), pj(x, SPAN, YE)], "S-STEEL-THIN")
 for y in (0, SPAN):
     iso.line(pj(0, y, YS), pj(LENGTH, y, YS), "S-STEEL-THIN")
 for a, b in ((FX[0], FX[1]), (FX[-2], FX[-1])):
@@ -299,17 +304,17 @@ def frame(ax):
 LEGEND = [
     ("MEMBERS", ""),
     ("Frames (11 No. @ 1.50 m): legs + rafters", "SHS 80x80x5"),
-    ("Collar tie under the ridge, every frame", "SHS 80x80x2, L=1117"),
+    ("Collar tie under the ridge, every frame", f"SHS 80x80x2, L={CX[1] - CX[0]:.0f}"),
     ("Knee gussets, every frame", "PL 8 both faces"),
-    (f"Purlins (13 lines @ {SPAN / N_CELL:.0f}), sill rails (2)", "SHS 80x80x2"),
+    (f"Purlins ({N_CELL + 1} lines @ {SPAN / N_CELL:.0f}), mid-bay bars, sill rails", "SHS 80x80x2"),
     ("Bracing, end bays, roof plane", "Ø12 rod"),
     ("Base plates (22 No.) on the house roof slab", "PL 200x200x12 + 4 M12 chem."),
-    ("Glazing", "16 mm multiwall polycarbonate"),
+    ("Glazing (roof + windows)", "BLACK / smoke tint, 16 mm multiwall PC"),
     ("Vent windows (20 No.) on both 15 m sides", f"{WIN_W:.0f} x {WIN_H:.0f} alu. top-hung"),
     ("Legs drop 0.5 m past the parapet onto the house roof; parapet not loaded", ""),
     ("", ""),
     (f"Span {SPAN / 1000:.2f} m leg to leg  |  slope {math.degrees(SLOPE):.1f}°  |  "
-     f"cells {BAY / 1000:.2f} x {SPAN / N_CELL / 1000:.2f} m", ""),
+     f"cells {BAY / 2000:.2f} x {SPAN / N_CELL / 1000:.2f} m", ""),
     ("Dimensions in mm, levels in m (±0.00 = top of parapet)", ""),
 ]
 
@@ -337,7 +342,7 @@ def title_block(ax):
     for (x, lab, val) in ((x0 + 3, "SCALE", "AS SHOWN @ A1"), (735, "SHEET", "S-01")):
         ax.text(x, 33.5, lab, fontsize=1.8 * LW, va="top", color="#555")
         ax.text(x, 30, val, fontsize=3.0 * LW, va="top", weight="bold")
-    for (x, lab, val) in ((x0 + 3, "DATE", "2026-11-06"), (735, "REV", "2  - collar tie, no eave tie")):
+    for (x, lab, val) in ((x0 + 3, "DATE", "2026-11-06"), (735, "REV", "3  - cells 750x670, black glazing")):
         ax.text(x, 21.5, lab, fontsize=1.8 * LW, va="top", color="#555")
         ax.text(x, 18, val, fontsize=2.6 * LW, va="top")
 
