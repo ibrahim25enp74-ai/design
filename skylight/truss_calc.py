@@ -9,7 +9,7 @@ import numpy as np
 
 # ------------------------------------------------------------------ geometry
 import sys
-SPAN = float(sys.argv[1]) if len(sys.argv) > 1 else 6.0   # m, bearing axis to axis
+SPAN = float(sys.argv[1]) if len(sys.argv) > 1 else 6.7   # m, leg axis to leg axis
 H_END, RISE = 0.50, 0.50                     # m
 LENGTH, N_TRUSS = 15.0, 8                    # 8 trusses -> 7 bays
 BAY = LENGTH / (N_TRUSS - 1)                 # 2.143 m = 2.1 m sheet + H-profile

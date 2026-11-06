@@ -16,12 +16,18 @@ from shapely.geometry import LineString, Polygon, box
 from shapely.ops import unary_union
 
 # ======================================================================= design data
-SPAN, LENGTH, N_TRUSS = 6000.0, 15000.0, 8
+PAR_AX = 6000.0                            # parapet axis to parapet axis (verify on site)
+LEG_OFF = 350.0                            # leg axis beyond the parapet axis, on the house roof
+SPAN = PAR_AX + 2 * LEG_OFF                # 6700, leg axis to leg axis
+LENGTH, N_TRUSS = 15000.0, 8
 BAY = LENGTH / (N_TRUSS - 1)               # 2142.9
-PANEL = SPAN / 6                           # 1000
+PANEL = SPAN / 6                           # 1117
 B = 80.0                                   # SHS outer width
 PL_T = 12.0                                # base plate
-YB = PL_T + B / 2                          # bottom chord centre line
+PH = 500.0                                 # leg below the top of the parapet = parapet height
+COPE_W, COPE_H, BRICK = 400.0, 100.0, 240.0  # overhanging coping on a brick parapet
+CLR = 20.0                                 # bottom chord clears the coping (parapet not loaded)
+YB = CLR + B / 2                           # bottom chord centre line
 YE = YB + 500.0                            # eave node
 YR = YE + 500.0                            # ridge node
 SLOPE = math.atan((YR - YE) / (SPAN / 2))
@@ -290,7 +296,7 @@ def truss_members():
     """centre-line members of one truss: list of (pts, group)"""
     m = [([(0, YB), (SPAN, YB)], "bc"),
          ([(0, YE), (SPAN / 2, YR), (SPAN, YE)], "tc"),
-         ([(0, PL_T), (0, YE + 200)], "post"), ([(SPAN, PL_T), (SPAN, YE + 200)], "post")]
+         ([(0, -PH + PL_T), (0, YE + 200)], "post"), ([(SPAN, -PH + PL_T), (SPAN, YE + 200)], "post")]
     for x in PX[1:-1]:
         m.append(([(x, YB), (x, top_y(x))], "web"))
     for i in range(3):
@@ -301,7 +307,7 @@ def truss_members():
 
 def truss_outline():
     off = B / 2 / math.cos(SLOPE)
-    env = Polygon([(-B / 2, PL_T), (SPAN + B / 2, PL_T), (SPAN + B / 2, top_y(SPAN) + off - B / 2 * math.tan(SLOPE)),
+    env = Polygon([(-B / 2, -PH + PL_T), (SPAN + B / 2, -PH + PL_T), (SPAN + B / 2, top_y(SPAN) + off - B / 2 * math.tan(SLOPE)),
                    (SPAN / 2, YR + off), (-B / 2, YE + off - B / 2 * math.tan(SLOPE))])
     g = unary_union([shs_band(p) for p, _ in truss_members()]).intersection(env)
     return g
@@ -318,22 +324,18 @@ def slope_pt(x, d):
     return (x + n[0] * d, top_y(x) + n[1] * d)
 
 
-PH = 1000.0      # parapet height incl. RC cap (top of cap = ±0.00) - verify on site
-CAP_W, CAP_H, BRICK = 300.0, 200.0, 240.0
-
-
-def house(v, x_edge, side, depth=800, drop=350):
-    """Parapet (brick + RC cap) on the RC roof slab of one house. side=-1 house on the left.
-    x_edge = courtyard face of the RC cap; the bearing axis is the parapet axis."""
-    ax_ = x_edge - side * CAP_W / 2
+def house(v, ax_, side, depth=1050, drop=350):
+    """Brick parapet with overhanging coping on the RC roof slab of one house.
+    ax_ = parapet axis, side=-1 house on the left. Top of coping = ±0.00."""
     x_far = ax_ + side * depth
+    CAP_W, CAP_H = COPE_W, COPE_H
     cap = [(ax_ - CAP_W / 2, 0), (ax_ + CAP_W / 2, 0), (ax_ + CAP_W / 2, -CAP_H), (ax_ - CAP_W / 2, -CAP_H)]
     v.pline(cap, "A-CONC", closed=True)
     v.hatch(cap, spacing=1.0)
     br = [(ax_ - BRICK / 2, -CAP_H), (ax_ + BRICK / 2, -CAP_H), (ax_ + BRICK / 2, -PH), (ax_ - BRICK / 2, -PH)]
     v.pline(br, "A-CONC", closed=True)
     v.hatch(br, spacing=1.0, angle=-45)
-    xo = ax_ - side * BRICK / 2       # courtyard face of brick / building face
+    xo = ax_ - side * BRICK / 2       # courtyard face of the brick = building face
     slab = [(xo, -PH), (x_far, -PH), (x_far, -PH - 200), (xo, -PH - 200)]
     v.pline(slab, "A-CONC", closed=True)
     v.hatch(slab, spacing=1.6)
@@ -348,15 +350,18 @@ views = []
 sheet_items = []
 
 # ---------------------------------------------------------------- 1 roof plan 1:50
-plan = View("TOP VIEW", 50, (55, 418), (0, 20000), "roof plan - trusses, purlins, bracing")
+plan = View("TOP VIEW", 50, (55, 400), (0, 20000), "roof plan - trusses, purlins, bracing")
 plan.title_xy = (35, 578)
 views.append(plan)
 P = plan
 # houses
-for y0, y1, name in ((-900, EDGE, "HOUSE 1 - ROOF"), (SPAN - EDGE, SPAN + 900, "HOUSE 2 - ROOF")):
+for y0, y1, name in ((-900, LEG_OFF - COPE_W / 2, "HOUSE 1 - ROOF"), (SPAN - LEG_OFF + COPE_W / 2, SPAN + 900, "HOUSE 2 - ROOF")):
     pts = [(-1000, y0), (LENGTH + 1000, y0), (LENGTH + 1000, y1), (-1000, y1)]
     P.fill(pts, color="#ececec")
-    P.line((-1000, EDGE if y0 < 0 else SPAN - EDGE), (LENGTH + 1000, EDGE if y0 < 0 else SPAN - EDGE), "A-CONC")
+for yc in (LEG_OFF, SPAN - LEG_OFF):  # parapet coping, under the roof
+    for yy in (yc - COPE_W / 2, yc + COPE_W / 2):
+        P.line((-1000, yy), (LENGTH + 1000, yy), "A-CONC" if yy < 0 or yy > SPAN or abs(yy - yc) > 0 and
+               (yc < SPAN / 2 and yy < yc or yc > SPAN / 2 and yy > yc) else "S-HIDDEN")
     P.text((LENGTH / 2, (y0 + y1) / 2 + (-150 if y0 < 0 else 150)), name, 2.6, "center", "center", bold=True)
 # polycarbonate tint
 P.fill([(-40, -OVERHANG), (LENGTH + 40, -OVERHANG), (LENGTH + 40, SPAN + OVERHANG), (-40, SPAN + OVERHANG)], alpha=0.8)
@@ -384,34 +389,35 @@ for xm in (BAY * 3.5,):
         P.line((xm, y0), (xm, y1), "A-TEXT")
         s = 1 if y1 > y0 else -1
         P.pline([(xm, y1 + s * 350), (xm - 120, y1), (xm + 120, y1)], "A-TEXT", closed=True)
-        P.text((xm + 250, (y0 + y1) / 2), "FALL 9.5° (1:6)", 2.2, "left", "center", 90 if s < 0 else -90)
+        P.text((xm + 250, (y0 + y1) / 2), f"FALL {math.degrees(SLOPE):.1f}° (1:{SPAN / 2 / (YR - YE):.1f})", 2.2, "left", "center", 90 if s < 0 else -90)
 P.text((BAY * 5.5, SPAN / 2 + 110), "RIDGE", 2.2, "center", "bottom", layer="A-ALU", bold=True)
 P.leader((BAY * 0.5, SPAN * 0.25 - 400), (BAY * 1.5, -650), "Ø12 rod X-bracing in end bays, both slopes", 2.0)
 P.leader((BAY * 2.5, SPAN - 500), (BAY * 2.0, SPAN + 600),
          "16 mm multiwall polycarbonate, sheet 2100 wide = 1 bay, ribs down the slope", 2.0)
 # grids
 for i, x in enumerate(TX):
-    P.grid((x, -1800), (x, SPAN + 1200), str(i + 1))
+    P.grid((x, -1250), (x, SPAN + 1200), str(i + 1))
 P.grid((-1600, 0), (LENGTH + 400, 0), "A")
 P.grid((-1600, SPAN), (LENGTH + 400, SPAN), "B")
 # dims
 P.dim_chain([(x, SPAN + 1100) for x in TX], 0, fmt=lambda L: f"{L:.0f}")
 P.dim((TX[0], SPAN + 1100), (TX[-1], SPAN + 1100), 6, f"{LENGTH:.0f}  (8 trusses, 7 bays)")
 P.dim_chain([(LENGTH + 700, y) for y in PX], 0)
-P.dim((LENGTH + 700, 0), (LENGTH + 700, SPAN), -7, f"{SPAN:.0f}  bearing axes")
+P.dim((LENGTH + 700, 0), (LENGTH + 700, SPAN), -7, f"{SPAN:.0f}  leg axes")
 
 
 # ---------------------------------------------------------------- 2 truss section 1:20
-sec = View("FRONT VIEW", 25, (118, 292), (0, 0), "across the 6 m - typical truss, 8 No.")
+sec = View("FRONT VIEW", 25, (118, 286), (0, 0), "across the 6 m - typical truss, 8 No.")
 sec.title_xy = (35, 358)
 views.append(sec)
 S = sec
-house(S, -EDGE, -1, depth=700)
-house(S, SPAN + EDGE, +1, depth=700)
-S.text((-EDGE - 500, -PH + 200), "HOUSE 1\nROOF", 2.6, "center", "center", bold=True)
-S.text((SPAN + EDGE + 550, -PH + 200), "HOUSE 2\nROOF", 2.6, "center", "center", bold=True)
+house(S, LEG_OFF, -1)
+house(S, SPAN - LEG_OFF, +1)
+S.text((-390, -PH + 190), "HOUSE 1\nROOF", 2.3, "center", "center", bold=True)
+S.text((SPAN + 390, -PH + 190), "HOUSE 2\nROOF", 2.3, "center", "center", bold=True)
 S.text((SPAN / 2, -1150), "COURTYARD BELOW", 2.4, "center", "center", layer="A-DIM", bold=True)
-S.leader((SPAN + 120, -450), (SPAN + 600, -250), "PARAPET (solid brick 240)\n+ RC cap beam 300x200", 2.0)
+S.leader((SPAN - LEG_OFF + 120, -300), (SPAN - 1250, -400),
+         "PARAPET + overhanging coping: NOT loaded,\nbottom chord clears it by 20 mm", 2.0, "right")
 # centre lines
 for pts, _ in truss_members():
     S.pline(pts, "S-CENTER")
@@ -430,8 +436,9 @@ for x in (PX[1], PX[3], PX[5]):
     S.line((x - B / 2, YB + B / 2), (x + B / 2, YB - B / 2), "S-STEEL-THIN")
 # base plates
 for x in (0, SPAN):
-    S.pline([(x - 100, 0), (x + 100, 0), (x + 100, PL_T), (x - 100, PL_T)], "S-STEEL", closed=True)
-    S.line((x, PL_T + 15), (x, -120), "S-HIDDEN")
+    S.pline([(x - 100, -PH), (x + 100, -PH), (x + 100, -PH + PL_T), (x - 100, -PH + PL_T)], "S-STEEL", closed=True)
+    for a in (-70, 70):
+        S.line((x + a, -PH + PL_T + 15), (x + a, -PH - 110), "S-HIDDEN")
 # polycarbonate + ridge cap
 for side in (-1, 1):
     x0 = 0 if side < 0 else SPAN
@@ -455,22 +462,23 @@ for x in (0, SPAN):
 S.leader(slope_pt(1700, 48), (1500, 1520), "16 mm multiwall polycarbonate", 2.2, "right")
 S.leader((SPAN / 2 + 60, cap_h + 15), (3700, 1520), "aluminium ridge cap", 2.2)
 S.leader(slope_pt(4500, 0), (5000, 1250), "TOP CHORD  SHS 80x80x3", 2.2)
-S.leader((2500, YB - B / 2), (2200, -470), "BOTTOM CHORD  SHS 80x80x3", 2.2, "right")
-S.leader((4500, (YB + top_y(4500)) / 2), (3900, -470), "VERTICALS + DIAGONALS  SHS 80x80x2", 2.2, "left")
-S.leader((-B / 2, 380), (-650, 900), "END POST SHS 80x80x3\n+ alu. louvers", 2.0)
+S.leader((2500, YB - B / 2), (2200, -200), "BOTTOM CHORD  SHS 80x80x3", 2.2, "right")
+S.leader((4500, (YB + top_y(4500)) / 2), (3900, -200), "VERTICALS + DIAGONALS  SHS 80x80x2", 2.2, "left")
+S.leader((-B / 2, 380), (-650, 900), "LEG / END POST SHS 80x80x3\n+ alu. louvers above parapet", 2.0)
 S.leader((PX[1], top_y(PX[1]) + 20), (700, 1250), "PURLIN SHS 80x80x2", 2.0, "right")
-S.leader((-60, PL_T / 2), (-650, 260), "BASE PL 250x200x12\n2 M12 into RC cap", 2.0)
+S.leader((-60, -PH + PL_T / 2), (-800, -250), "BASE PL 200x200x12\n4 M12 into roof slab", 2.0)
 # dims
-S.dim_chain([(x, -10) for x in PX], -4)
-S.dim((0, -10), (SPAN, -10), -9, f"{SPAN:.0f}  bearing axes")
-S.dim((-EDGE, -CAP_H), (SPAN + EDGE, -CAP_H), -8, f"{SPAN - 2 * EDGE:.0f}  clear between parapets  (verify on site)")
-S.dim((-EDGE - 1000, -PH), (-EDGE - 1000, 0), -4, f"{PH:.0f}")
-S.dim_chain([(SPAN + 420, YB), (SPAN + 420, YE), (SPAN + 420, YR)], -4)
-S.level(-EDGE - 100, 0, "±0.00 top of parapet", -1)
-S.level(-EDGE - 400, -PH, f"-{PH / 1000:.2f} house roof (verify)", -1)
-S.level(SPAN + EDGE + 120, top_face(SPAN), f"+{top_face(SPAN) / 1000:.2f} eave", 1)
+S.dim_chain([(x, -PH) for x in PX], -5)
+S.dim((0, -PH), (SPAN, -PH), -15, f"{SPAN:.0f}  leg axes")
+S.dim((LEG_OFF, -PH), (SPAN - LEG_OFF, -PH), -10, f"{PAR_AX:.0f}  parapet axes (verify on site)")
+S.dim((0, -PH), (LEG_OFF, -PH), -10)
+S.dim((SPAN - LEG_OFF, -PH), (SPAN, -PH), -10)
+S.dim_chain([(SPAN + 450, -PH), (SPAN + 450, 0), (SPAN + 450, YE), (SPAN + 450, YR)], -4)
+S.level(-160, 0, "±0.00 top of parapet", -1)
+S.level(-700, -PH, f"-{PH / 1000:.2f} house roof", -1)
+S.level(-160, top_face(0) - 20, f"+{top_face(0) / 1000:.2f} eave", -1)
 S.level(SPAN / 2 - 30, YR + 300, f"+{(top_face(SPAN / 2) + SHEET_T) / 1000:.2f} ridge", -1)
-S.text((1900, top_face(1900) + 70), "slope 9.5° (1:6)", 2.2, "center", "bottom", math.degrees(SLOPE), "A-DIM")
+S.text((1900, top_face(1900) + 70), f"slope {math.degrees(SLOPE):.1f}° (1:{SPAN / 2 / (YR - YE):.1f})", 2.2, "center", "bottom", math.degrees(SLOPE), "A-DIM")
 
 
 # ---------------------------------------------------------------- 3 side elevation 1:50
@@ -478,9 +486,9 @@ el = View("SIDE VIEW", 50, (55, 152), (0, -6000), "along the 15 m - louvred vent
 el.title_xy = (35, 210)
 views.append(el)
 E_ = el
-cap = [(-500, 0), (LENGTH + 500, 0), (LENGTH + 500, -CAP_H), (-500, -CAP_H)]
+cap = [(-500, 0), (LENGTH + 500, 0), (LENGTH + 500, -COPE_H), (-500, -COPE_H)]
 E_.pline(cap, "A-CONC", closed=True); E_.hatch(cap, spacing=1.0)
-br = [(-500, -CAP_H), (LENGTH + 500, -CAP_H), (LENGTH + 500, -PH), (-500, -PH)]
+br = [(-500, -COPE_H), (LENGTH + 500, -COPE_H), (LENGTH + 500, -PH), (-500, -PH)]
 E_.pline(br, "A-CONC", closed=True); E_.hatch(br, spacing=1.6, angle=-45)
 roof = [(-40, top_face(0) - OVERHANG * math.tan(SLOPE)), (LENGTH + 40, top_face(0) - OVERHANG * math.tan(SLOPE)),
         (LENGTH + 40, top_face(SPAN / 2) + SHEET_T), (-40, top_face(SPAN / 2) + SHEET_T)]
@@ -488,7 +496,9 @@ E_.fill(roof, color="#bfe6f3")
 E_.pline(roof, "A-GLAZ", closed=True)
 for x in TX:
     E_.line((x, top_face(0)), (x, top_face(SPAN / 2)), "A-ALU")
-frame = [box(x - B / 2, PL_T, x + B / 2, YE + B / 2) for x in TX]
+frame = [box(x - B / 2, CLR, x + B / 2, YE + B / 2) for x in TX]
+for x in TX:  # legs behind the parapet
+    E_.line((x - B / 2, -PH), (x - B / 2, 0), "S-HIDDEN"); E_.line((x + B / 2, -PH), (x + B / 2, 0), "S-HIDDEN")
 frame += [box(TX[0], YB - B / 2, TX[-1], YB + B / 2), box(TX[0], YE - B / 2, TX[-1], YE + B / 2)]
 E_.shape(unary_union(frame), "S-STEEL")
 for a, b in zip(TX, TX[1:]):
@@ -496,15 +506,15 @@ for a, b in zip(TX, TX[1:]):
         E_.line((a + B / 2 + 20, y), (b - B / 2 - 20, y), "A-LOUVER")
 for i, x in enumerate(TX):
     E_.grid((x, 1750), (x, top_face(SPAN / 2) + 60), str(i + 1), at_start=True)
-    E_.pline([(x - 125, 0), (x + 125, 0), (x + 125, PL_T), (x - 125, PL_T)], "S-STEEL-THIN", closed=True)
 E_.dim_chain([(x, -PH) for x in TX], -4)
 E_.dim((LENGTH + 500, 0), (LENGTH + 500, top_face(0)), -4, f"{top_face(0):.0f}")
+E_.text((BAY * 4.5, -PH / 2), "legs behind the parapet (dashed)", 2.0, "center", "center", layer="A-DIM")
 E_.dim((LENGTH + 500, top_face(0)), (LENGTH + 500, top_face(SPAN / 2) + SHEET_T), -4,
        f"{top_face(SPAN / 2) + SHEET_T - top_face(0):.0f}")
 E_.leader((BAY * 0.5, (YB + YE) / 2), (BAY * 0.2, -1900), "alu. weather louvers + insect mesh", 2.0, "left")
 E_.leader((BAY * 3.5, YB), (BAY * 3.4, -1900), "SILL SHS 80x80x2", 2.0, "left")
 E_.leader((BAY * 5.5, YE), (BAY * 5.3, -1900), "EAVE PURLIN SHS 80x80x2", 2.0, "left")
-E_.leader((BAY * 6.6, -500), (BAY * 6.8, -1900), "PARAPET + RC cap", 2.0, "left")
+E_.leader((BAY * 6.6, -300), (BAY * 6.8, -1900), "PARAPET + coping", 2.0, "left")
 E_.dim((LENGTH + 500, -PH), (LENGTH + 500, 0), -4, f"{PH:.0f}")
 
 # ---------------------------------------------------------------- 4 isometric (no scale)
@@ -526,9 +536,9 @@ def box3(x0, x1, y0, y1, z0, z1, layer="A-CONC"):
         iso.line(pj(x, y, z0), pj(x, y, z1), layer)
 
 
-for yc in (0, SPAN):  # parapets with RC cap under the bearings
-    box3(-800, LENGTH + 800, yc - CAP_W / 2, yc + CAP_W / 2, -PH, 0)
-for y0, y1 in ((-1800, BRICK / 2), (SPAN - BRICK / 2, SPAN + 1800)):  # houses as simple blocks
+for yc in (LEG_OFF, SPAN - LEG_OFF):  # parapets with overhanging coping
+    box3(-800, LENGTH + 800, yc - COPE_W / 2, yc + COPE_W / 2, -PH, 0)
+for y0, y1 in ((-1800, LEG_OFF + BRICK / 2), (SPAN - LEG_OFF - BRICK / 2, SPAN + 1800)):  # houses
     for z in (-PH, -PH - 1500):
         iso.pline([pj(-800, y0, z), pj(LENGTH + 800, y0, z), pj(LENGTH + 800, y1, z), pj(-800, y1, z)],
                   "A-CONC", closed=True)
@@ -854,16 +864,17 @@ def title_block(ax):
 
 LEGEND = [
     ("MEMBERS", ""),
-    ("Top chord, bottom chord, end posts", "SHS 80x80x3"),
+    ("Top chord, bottom chord, legs (end posts)", "SHS 80x80x3"),
     ("Verticals, diagonals", "SHS 80x80x2"),
     ("Purlins (7 lines), bottom ties (3), sills (2)", "SHS 80x80x2"),
     ("Bracing, end bays", "Ø12 rod"),
-    ("Base plates (16 No.)", "PL 250x200x12 + 2 M12 chem."),
-    ("Bearing: parapet, solid brick 240", "+ RC cap beam 300x200, 4Ø12"),
+    ("Legs drop 0.5 m past the parapet onto the house roof", ""),
+    ("Base plates (16 No.) on the roof slab", "PL 200x200x12 + 4 M12 chem."),
+    ("Parapet: not loaded, 20 mm clear under the truss", ""),
     ("Glazing", "16 mm multiwall polycarbonate"),
     ("Sides 0.5 m", "alu. louvers + insect mesh"),
     ("", ""),
-    ("Trusses: 8 No. @ 2143 mm  |  slope 9.5° (1:6)", ""),
+    (f"Trusses: 8 No. @ 2143 mm  |  span {SPAN / 1000:.2f} m leg to leg  |  slope {math.degrees(SLOPE):.1f}°", ""),
     ("Dimensions in mm, levels in m (±0.00 = top of parapet cap)", ""),
 ]
 
